@@ -5,8 +5,10 @@ class SpriteCutter {
     constructor() {
         this.imageProcessor = new ImageProcessor();
         this.historyManager = new HistoryManager();
+        this.draggableGrid = new DraggableGrid();
         this.currentImage = null;
         this.isProcessing = false;
+        this.customTileOrder = null; // 存储自定义的图块顺序
         
         this.init();
     }
@@ -34,7 +36,9 @@ class SpriteCutter {
             dropArea: document.getElementById('dropArea'),
             previewBtn: document.getElementById('previewBtn'),
             splitBtn: document.getElementById('splitBtn'),
+            resetOrderBtn: document.getElementById('resetOrderBtn'),
             previewImg: document.getElementById('previewImg'),
+            draggableGrid: document.getElementById('draggableGrid'),
             previewPlaceholder: document.getElementById('previewPlaceholder'),
             statusMessage: document.getElementById('statusMessage'),
             
@@ -44,7 +48,9 @@ class SpriteCutter {
             startNum: document.getElementById('startNum'),
             fontSize: document.getElementById('fontSize'),
             addNumber: document.getElementById('addNumber'),
-            sortDirectionInputs: document.querySelectorAll('input[name="sortDirection"]')
+            showPreviewNumber: document.getElementById('showPreviewNumber'),
+            sortDirectionInputs: document.querySelectorAll('input[name="sortDirection"]'),
+            previewModeInputs: document.querySelectorAll('input[name="previewMode"]')
         };
     }
 
@@ -67,20 +73,41 @@ class SpriteCutter {
             this.splitImage();
         });
 
+        // 重置顺序按钮
+        this.elements.resetOrderBtn.addEventListener('click', () => {
+            this.resetTileOrder();
+        });
+
         // 设置变化监听（实时预览）
         const settingsElements = [
             this.elements.rows, this.elements.cols, this.elements.startNum,
-            this.elements.fontSize, this.elements.addNumber, ...this.elements.sortDirectionInputs
+            this.elements.fontSize, this.elements.addNumber, this.elements.showPreviewNumber,
+            ...this.elements.sortDirectionInputs
         ];
 
         settingsElements.forEach(element => {
             const eventType = element.type === 'checkbox' || element.type === 'radio' ? 'change' : 'input';
             element.addEventListener(eventType, Utils.debounce(() => {
-                if (this.currentImage && this.elements.addNumber.checked) {
+                if (this.currentImage) {
                     this.generatePreview();
                 }
                 this.saveSettings();
             }, 500));
+        });
+
+        // 预览模式切换监听
+        this.elements.previewModeInputs.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (this.currentImage) {
+                    this.generatePreview();
+                }
+            });
+        });
+
+        // 监听可拖拽网格的顺序变化
+        this.elements.draggableGrid.addEventListener('tileOrderChanged', (e) => {
+            this.customTileOrder = e.detail.order;
+            Utils.showNotification('图块顺序已更新', 'success', 2000);
         });
 
         // 键盘快捷键
@@ -225,11 +252,28 @@ class SpriteCutter {
             this.updateStatus('正在生成预览...');
             
             const settings = this.getSettings();
-            const previewDataUrl = this.imageProcessor.generatePreview(this.currentImage, settings);
+            const previewMode = document.querySelector('input[name="previewMode"]:checked').value;
             
-            this.elements.previewImg.src = previewDataUrl;
-            this.elements.previewImg.style.display = 'block';
-            this.elements.previewPlaceholder.style.display = 'none';
+            if (previewMode === 'grid') {
+                // 显示可拖拽网格
+                this.elements.previewImg.style.display = 'none';
+                this.elements.draggableGrid.style.display = 'block';
+                this.elements.previewPlaceholder.style.display = 'none';
+                
+                // 可拖拽网格模式下，序号始终显示，不受addNumber影响
+                const gridSettings = { ...settings, addNumber: true };
+                this.draggableGrid.init(this.elements.draggableGrid, this.currentImage, gridSettings);
+            } else {
+                // 显示传统图像预览
+                this.elements.draggableGrid.style.display = 'none';
+                this.elements.previewImg.style.display = 'block';
+                this.elements.previewPlaceholder.style.display = 'none';
+                
+                // 图像预览模式下，使用showPreviewNumber控制序号显示
+                const previewSettings = { ...settings, addNumber: this.elements.showPreviewNumber.checked };
+                const previewDataUrl = this.imageProcessor.generatePreview(this.currentImage, previewSettings);
+                this.elements.previewImg.src = previewDataUrl;
+            }
             
             this.updateStatus('预览已生成');
             
@@ -262,6 +306,12 @@ class SpriteCutter {
             this.updateStatus('正在切割图片，请稍候...');
 
             const settings = this.getSettings();
+            
+            // 如果有自定义顺序，添加到设置中
+            if (this.customTileOrder) {
+                settings.customOrder = this.customTileOrder;
+            }
+            
             const zipBlob = await this.imageProcessor.splitImage(this.currentImage, settings);
             
             // 生成文件名
@@ -299,6 +349,7 @@ class SpriteCutter {
             startNum: Math.max(0, parseInt(this.elements.startNum.value) || CONFIG.DEFAULTS.START_NUM),
             fontSize: Math.max(CONFIG.LIMITS.MIN_FONT_SIZE, Math.min(parseInt(this.elements.fontSize.value) || CONFIG.DEFAULTS.FONT_SIZE, CONFIG.LIMITS.MAX_FONT_SIZE)),
             addNumber: this.elements.addNumber.checked,
+            showPreviewNumber: this.elements.showPreviewNumber.checked,
             sortDirection
         };
     }
@@ -329,7 +380,8 @@ class SpriteCutter {
             this.elements.cols.value = settings.cols || CONFIG.DEFAULTS.COLS;
             this.elements.startNum.value = settings.startNum || CONFIG.DEFAULTS.START_NUM;
             this.elements.fontSize.value = settings.fontSize || CONFIG.DEFAULTS.FONT_SIZE;
-            this.elements.addNumber.checked = settings.addNumber !== undefined ? settings.addNumber : CONFIG.DEFAULTS.ADD_NUMBER;
+            this.elements.addNumber.checked = settings.addNumber !== undefined ? settings.addNumber : false; // 默认不添加序号到最终图片
+            this.elements.showPreviewNumber.checked = settings.showPreviewNumber !== undefined ? settings.showPreviewNumber : true; // 默认在预览中显示序号
             
             // 设置排序方向
             const sortRadio = document.querySelector(`input[name="sortDirection"][value="${settings.sortDirection || CONFIG.DEFAULTS.SORT_DIRECTION}"]`);
@@ -348,6 +400,19 @@ class SpriteCutter {
     updateStatus(message) {
         if (this.elements.statusMessage) {
             this.elements.statusMessage.textContent = message;
+        }
+    }
+
+    /**
+     * 重置图块顺序
+     */
+    resetTileOrder() {
+        if (this.draggableGrid && this.elements.draggableGrid.style.display !== 'none') {
+            this.draggableGrid.resetOrder();
+            this.customTileOrder = null;
+            Utils.showNotification('图块顺序已重置', 'success', 2000);
+        } else {
+            Utils.showNotification('请先切换到可拖拽网格模式', 'warning', 3000);
         }
     }
 

@@ -60,7 +60,8 @@ class ImageProcessor {
             startNum = CONFIG.DEFAULTS.START_NUM,
             fontSize = CONFIG.DEFAULTS.FONT_SIZE,
             addNumber = CONFIG.DEFAULTS.ADD_NUMBER,
-            sortDirection = CONFIG.DEFAULTS.SORT_DIRECTION
+            sortDirection = CONFIG.DEFAULTS.SORT_DIRECTION,
+            customOrder = null
         } = options;
 
         const tileWidth = img.width / cols;
@@ -70,24 +71,43 @@ class ImageProcessor {
         const imgFolder = zip.folder('tiles');
         const promises = [];
 
-        let count = startNum + 1;
+        // 创建所有图块数据
+        const tiles = [];
+        let originalIndex = 0;
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const colIdx = this._getColumnIndex(row, col, cols, sortDirection);
                 const tileCanvas = this._createTileCanvas(
-                    img, colIdx, row, tileWidth, tileHeight, count, fontSize, addNumber
+                    img, colIdx, row, tileWidth, tileHeight, 0, fontSize, addNumber
                 );
-
-                const filename = `${count.toString().padStart(4, '0')}.png`;
-                const promise = this._canvasToBlob(tileCanvas).then(blob => {
-                    imgFolder.file(filename, blob);
+                
+                tiles.push({
+                    canvas: tileCanvas,
+                    originalIndex: originalIndex,
+                    row: row,
+                    col: colIdx
                 });
-
-                promises.push(promise);
-                count++;
+                originalIndex++;
             }
         }
+
+        // 如果有自定义顺序，按自定义顺序重排
+        let orderedTiles = tiles;
+        if (customOrder && customOrder.length === tiles.length) {
+            orderedTiles = customOrder.map(index => tiles[index]);
+        }
+
+        // 生成文件
+        orderedTiles.forEach((tile, index) => {
+            const count = startNum + index + 1;
+            const filename = `${count.toString().padStart(4, '0')}.png`;
+            
+            const promise = this._canvasToBlob(tile.canvas).then(blob => {
+                imgFolder.file(filename, blob);
+            });
+            promises.push(promise);
+        });
 
         await Promise.all(promises);
         return await zip.generateAsync({ type: 'blob' });

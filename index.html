@@ -78,9 +78,16 @@
                 <div class="advanced-options">
                     <!-- 序号选项 -->
                     <div class="checkbox-group">
-                        <input type="checkbox" id="addNumber" checked aria-describedby="number-help">
-                        <label for="addNumber">在图片上添加序号</label>
-                        <small id="number-help" style="color: #718096; margin-left: auto;">便于识别图块顺序</small>
+                        <input type="checkbox" id="addNumber" aria-describedby="number-help">
+                        <label for="addNumber">在切割图片上添加序号</label>
+                        <small id="number-help" style="color: #718096; margin-left: auto;">最终输出的图片文件是否包含序号</small>
+                    </div>
+
+                    <!-- 预览序号选项 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showPreviewNumber" checked aria-describedby="preview-number-help">
+                        <label for="showPreviewNumber">预览时显示序号</label>
+                        <small id="preview-number-help" style="color: #718096; margin-left: auto;">仅在预览模式下显示序号，不影响最终输出</small>
                     </div>
                     
                     <!-- 排序方向选项 -->
@@ -97,6 +104,17 @@
                         <div class="radio-option">
                             <input type="radio" id="sortEvenLeftOddRight" name="sortDirection" value="evenLeftOddRight">
                             <label for="sortEvenLeftOddRight">偶数行从左到右，奇数行从右到左排序</label>
+                        </div>
+                    </div>
+
+                    <!-- 拖拽排序控制 -->
+                    <div class="drag-sort-controls">
+                        <h3>手动排序控制</h3>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <button id="resetOrderBtn" class="btn" style="background: linear-gradient(145deg, #ed8936, #dd6b20); color: white; padding: 8px 16px; font-size: 0.9em;">
+                                重置图块顺序
+                            </button>
+                            <small style="color: #718096;">在可拖拽网格模式下可拖动图块调整顺序</small>
                         </div>
                     </div>
                 </div>
@@ -122,8 +140,17 @@
             <!-- 预览区域 -->
             <section class="preview-section" aria-labelledby="preview-title">
                 <h2 id="preview-title">预览</h2>
+                <div class="preview-mode-toggle">
+                    <label>
+                        <input type="radio" name="previewMode" value="image"> 图像预览
+                    </label>
+                    <label>
+                        <input type="radio" name="previewMode" value="grid" checked> 可拖拽网格
+                    </label>
+                </div>
                 <div class="preview-container">
                     <img id="previewImg" src="" alt="切割预览图" style="display: none;">
+                    <div id="draggableGrid" class="draggable-grid" style="display: none;"></div>
                     <div id="previewPlaceholder">上传图片后将显示预览</div>
                 </div>
             </section>
@@ -163,6 +190,7 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/image-processor.js"></script>
+    <script src="assets/js/draggable-grid.js"></script>
     <script src="assets/js/history-manager.js"></script>
     <script src="assets/js/app.js"></script>
 

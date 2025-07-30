@@ -15,7 +15,8 @@ const CONFIG = {
         COLS: 12,
         START_NUM: 0,
         FONT_SIZE: 20,
-        ADD_NUMBER: true,
+        ADD_NUMBER: false, // 默认不在最终图片上添加序号
+        SHOW_PREVIEW_NUMBER: true, // 默认在预览中显示序号
         SORT_DIRECTION: 'normal'
     },
 
