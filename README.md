@@ -1,6 +1,6 @@
 # 精灵图切割工具 v2.1
 
-直接使用：https://minggre.github.io/SpriteSlice/
+直接使用：https://arminosi.github.io/SpriteSlice/
 
 ## 📋 项目简介
 
