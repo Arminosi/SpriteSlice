@@ -1,4 +1,4 @@
-# 精灵图切割工具 v2.3
+# 精灵图切割工具
 
 直接使用：https://arminosi.github.io/SpriteSlice/
 
