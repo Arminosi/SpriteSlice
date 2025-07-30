@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="专业的精灵图切割工具，支持多种排序方式和批量处理">
     <meta name="keywords" content="精灵图,切割,图片处理,批量处理">
-    <meta name="author" content="AI Assistant">
+    <meta name="author" content="Arminosi">
+    <meta name="repository" content="https://github.com/Arminosi/SpriteSlice">
     <title>精灵图切割工具 v2.0</title>
     
     <!-- 预加载关键资源 -->
@@ -13,7 +14,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" as="script">
     
     <!-- 样式文件 -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=20250730-9">
     
     <!-- 网站图标 -->
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM0Mjk5ZTEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiLz48cGF0aCBkPSJtOSA5IDMgMyAzLTMiLz48L3N2Zz4=">
@@ -23,154 +24,203 @@
     <div class="container">
         <!-- 头部 -->
         <header>
-            <h1>精灵图切割工具</h1>
-            <p>专业的图片切割工具，支持多种排序方式和批量处理</p>
+            <!-- 语言切换器 -->
+            <div class="language-switcher">
+                <button id="languageSwitcher" class="language-toggle-btn" aria-label="Language Toggle">
+                    <span class="lang-zh">中文</span>
+                    <span class="lang-separator">|</span>
+                    <span class="lang-en">ENG</span>
+                </button>
+            </div>
+            
+            <h1 data-i18n="header.title">精灵图切割工具</h1>
+            <p data-i18n="header.subtitle">专业的图片切割工具，支持多种排序方式和批量处理</p>
         </header>
 
         <!-- 主内容区域 -->
         <main class="main-content">
-            <!-- 步骤1: 文件上传 -->
-            <section class="upload-section" aria-labelledby="upload-title">
-                <h2 id="upload-title">步骤 1: 选择精灵图</h2>
-                <div class="file-upload" id="dropArea" role="button" tabindex="0" aria-label="点击或拖拽上传图片">
-                    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="file-help" />
-                    <label for="fileInput">选择图片文件</label>
-                    <span id="fileNameDisplay">或将文件拖拽到此处</span>
-                    <div id="file-help" style="font-size: 0.9em; color: #718096; margin-top: 8px;">
-                        支持 PNG、JPEG、GIF、WebP 格式，快捷键：Ctrl+O
+            <!-- 左侧控制面板 -->
+            <div class="control-panel">
+                <!-- 步骤1: 文件上传 -->
+                <section class="upload-section" aria-labelledby="upload-title">
+                    <h2 id="upload-title" data-i18n="upload.title">步骤 1: 选择精灵图</h2>
+                    <div class="file-upload" id="dropArea" role="button" tabindex="0" data-i18n-attr="aria-label:upload.selectFile">
+                        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="file-help" />
+                        <label for="fileInput" data-i18n="upload.selectFile">选择图片文件</label>
+                        <span id="fileNameDisplay" data-i18n="upload.dragDrop">或将文件拖拽到此处</span>
+                        <div id="file-help" style="font-size: 0.9em; color: #718096; margin-top: 8px;" data-i18n="upload.supportedFormats">
+                            支持 PNG、JPEG、GIF、WebP 格式，快捷键：Ctrl+O
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- 步骤2: 参数设置 -->
-            <section class="settings-section" aria-labelledby="settings-title">
-                <h2 id="settings-title">步骤 2: 设置切割参数</h2>
-                <div class="settings-grid">
-                    <div class="setting-group">
-                        <label for="rows">行数:</label>
-                        <input type="number" id="rows" min="1" max="50" value="8" aria-describedby="rows-help">
-                        <small id="rows-help" style="color: #718096;">范围: 1-50</small>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="cols">列数:</label>
-                        <input type="number" id="cols" min="1" max="50" value="12" aria-describedby="cols-help">
-                        <small id="cols-help" style="color: #718096;">范围: 1-50</small>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="startNum">起始序号:</label>
-                        <input type="number" id="startNum" min="0" value="0" aria-describedby="start-help">
-                        <small id="start-help" style="color: #718096;">从此数字开始编号</small>
-                    </div>
-
-                    <div class="setting-group">
-                        <label for="fontSize">字号:</label>
-                        <input type="number" id="fontSize" min="8" max="100" value="20" aria-describedby="font-help">
-                        <small id="font-help" style="color: #718096;">范围: 8-100px</small>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 步骤3: 高级选项 -->
-            <section class="advanced-section" aria-labelledby="advanced-title">
-                <h2 id="advanced-title">步骤 3: 高级选项</h2>
-                <div class="advanced-options">
-                    <!-- 序号选项 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="addNumber" aria-describedby="number-help">
-                        <label for="addNumber">在切割图片上添加序号</label>
-                        <small id="number-help" style="color: #718096; margin-left: auto;">最终输出的图片文件是否包含序号</small>
-                    </div>
-
-                    <!-- 预览序号选项 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="showPreviewNumber" checked aria-describedby="preview-number-help">
-                        <label for="showPreviewNumber">预览时显示序号</label>
-                        <small id="preview-number-help" style="color: #718096; margin-left: auto;">仅在预览模式下显示序号，不影响最终输出</small>
+                <!-- 步骤2: 参数设置 -->
+                <section class="settings-section" aria-labelledby="settings-title">
+                    <div class="settings-tabs">
+                        <button class="tab-button active" data-tab="basic" data-i18n="settings.basicTab">基础参数</button>
+                        <button class="tab-button" data-tab="advanced" data-i18n="settings.advancedTab">高级选项</button>
                     </div>
                     
-                    <!-- 排序方向选项 -->
-                    <div class="radio-group" role="radiogroup" aria-labelledby="sort-title">
-                        <h3 id="sort-title">排序方向</h3>
-                        <div class="radio-option">
-                            <input type="radio" id="sortNormal" name="sortDirection" value="normal" checked>
-                            <label for="sortNormal">正常排序（从左到右，从上到下）</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="sortOddLeftEvenRight" name="sortDirection" value="oddLeftEvenRight">
-                            <label for="sortOddLeftEvenRight">奇数行从左到右，偶数行从右到左排序</label>
-                        </div>
-                        <div class="radio-option">
-                            <input type="radio" id="sortEvenLeftOddRight" name="sortDirection" value="evenLeftOddRight">
-                            <label for="sortEvenLeftOddRight">偶数行从左到右，奇数行从右到左排序</label>
+                    <!-- 基础参数标签页 -->
+                    <div class="tab-content active" id="basicTab">
+                        <h2 id="settings-title" data-i18n="settings.title">设置切割参数</h2>
+                        <div class="settings-grid">
+                            <div class="setting-group">
+                                <label for="rows" data-i18n="settings.rows">行数:</label>
+                                <input type="number" id="rows" min="1" max="50" value="8" aria-describedby="rows-help">
+                                <small id="rows-help" style="color: #718096;" data-i18n="settings.rowsRange">范围: 1-50</small>
+                            </div>
+
+                            <div class="setting-group">
+                                <label for="cols" data-i18n="settings.cols">列数:</label>
+                                <input type="number" id="cols" min="1" max="50" value="12" aria-describedby="cols-help">
+                                <small id="cols-help" style="color: #718096;" data-i18n="settings.colsRange">范围: 1-50</small>
+                            </div>
+
+                            <div class="setting-group">
+                                <label for="startNum" data-i18n="settings.startNum">起始序号:</label>
+                                <input type="number" id="startNum" min="0" value="0" aria-describedby="start-help">
+                                <small id="start-help" style="color: #718096;" data-i18n="settings.startNumHelp">从此数字开始编号</small>
+                            </div>
+
+                            <div class="setting-group">
+                                <label for="fontSize" data-i18n="settings.fontSize">字号:</label>
+                                <input type="number" id="fontSize" min="8" max="100" value="20" aria-describedby="font-help">
+                                <small id="font-help" style="color: #718096;" data-i18n="settings.fontSizeRange">范围: 8-100px</small>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- 拖拽排序控制 -->
-                    <div class="drag-sort-controls">
-                        <h3>手动排序控制</h3>
-                        <div style="display: flex; gap: 12px; align-items: center;">
-                            <button id="resetOrderBtn" class="btn" style="background: linear-gradient(145deg, #ed8936, #dd6b20); color: white; padding: 8px 16px; font-size: 0.9em;">
-                                重置图块顺序
-                            </button>
-                            <small style="color: #718096;">在可拖拽网格模式下可拖动图块调整顺序</small>
+                    
+                    <!-- 高级选项标签页 -->
+                    <div class="tab-content" id="advancedTab">
+                        <h2 data-i18n="settings.advancedTab">高级选项</h2>
+                        <div class="advanced-options">
+                            <!-- 序号选项 -->
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="addNumber" aria-describedby="number-help">
+                                <label for="addNumber" data-i18n="settings.addNumber">在切割图片上添加序号</label>
+                                <small id="number-help" style="color: #718096; margin-left: auto;" data-i18n="settings.addNumberHelp">最终输出的图片文件是否包含序号</small>
+                            </div>
+                            
+                            <!-- 排序方向选项 -->
+                            <div class="radio-group" role="radiogroup" aria-labelledby="sort-title">
+                                <h3 id="sort-title" data-i18n="settings.sortDirection">排序方向</h3>
+                                <div class="radio-option">
+                                    <input type="radio" id="sortNormal" name="sortDirection" value="normal" checked>
+                                    <label for="sortNormal" data-i18n="settings.sortNormal">正常排序（从左到右，从上到下）</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="sortOddLeftEvenRight" name="sortDirection" value="oddLeftEvenRight">
+                                    <label for="sortOddLeftEvenRight" data-i18n="settings.sortOddLeftEvenRight">奇数行从左到右，偶数行从右到左排序</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="sortEvenLeftOddRight" name="sortDirection" value="evenLeftOddRight">
+                                    <label for="sortEvenLeftOddRight" data-i18n="settings.sortEvenLeftOddRight">偶数行从左到右，奇数行从右到左排序</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            <!-- 操作按钮 -->
-            <div class="action-buttons">
-                <button id="previewBtn" class="btn primary" aria-describedby="preview-help">
-                    生成预览
-                </button>
-                <button id="splitBtn" class="btn secondary" aria-describedby="split-help">
-                    开始切割
-                </button>
-                <button id="toggleHistoryBtn" class="btn" style="background: linear-gradient(145deg, #f39c12, #e67e22); color: white;">
-                    历史文件
-                </button>
-                <div style="font-size: 0.8em; color: #718096; text-align: center; width: 100%; margin-top: 8px;">
-                    <div id="preview-help">快捷键：Ctrl+P</div>
-                    <div id="split-help">快捷键：Ctrl+S</div>
-                </div>
+                </section>
             </div>
 
-            <!-- 预览区域 -->
-            <section class="preview-section" aria-labelledby="preview-title">
-                <h2 id="preview-title">预览</h2>
-                <div class="preview-mode-toggle">
-                    <label>
-                        <input type="radio" name="previewMode" value="image"> 图像预览
-                    </label>
-                    <label>
-                        <input type="radio" name="previewMode" value="grid" checked> 可拖拽网格
-                    </label>
-                </div>
-                <div class="preview-container">
-                    <img id="previewImg" src="" alt="切割预览图" style="display: none;">
-                    <div id="draggableGrid" class="draggable-grid" style="display: none;"></div>
-                    <div id="previewPlaceholder">上传图片后将显示预览</div>
-                </div>
-            </section>
+            <!-- 右侧预览面板 -->
+            <div class="preview-panel">
+                <!-- 预览区域 -->
+                <section class="preview-section" aria-labelledby="preview-title">
+                    <h2 id="preview-title" data-i18n="preview.title">预览</h2>
+                    
+                    <!-- 预览模式选择和重置按钮 -->
+                    <div class="preview-controls-row">
+                        <div class="preview-mode-toggle">
+                            <label>
+                                <input type="radio" name="previewMode" value="image">
+                                <span data-i18n="preview.imagePreview">图像预览</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="previewMode" value="grid" checked>
+                                <span data-i18n="preview.draggableGrid">可拖拽网格</span>
+                            </label>
+                        </div>
+                        
+                        <div class="reset-button-container">
+                            <button id="resetOrderBtn" class="btn reset-btn" data-i18n="preview.resetOrder">
+                                重置图块顺序
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 序号显示控制 -->
+                    <div class="preview-number-controls">
+                        <!-- 图像预览序号开关 -->
+                        <div class="checkbox-group preview-number-control" id="imagePreviewNumberControl" style="display: none;">
+                            <input type="checkbox" id="showPreviewNumber" checked aria-describedby="preview-number-help">
+                            <label for="showPreviewNumber" data-i18n="preview.showPreviewNumber">预览时显示序号</label>
+                            <small id="preview-number-help" style="color: #718096; margin-left: auto;" data-i18n="preview.showPreviewNumberHelp">仅在预览模式下显示序号，不影响最终输出</small>
+                        </div>
+                        
+                        <!-- 拖拽网格序号开关 -->
+                        <div class="checkbox-group preview-number-control" id="gridPreviewNumberControl">
+                            <input type="checkbox" id="showDragGridNumber" checked aria-describedby="drag-grid-number-help">
+                            <label for="showDragGridNumber" data-i18n="preview.showDragGridNumber">拖拽网格中显示序号</label>
+                            <small id="drag-grid-number-help" style="color: #718096; margin-left: auto;" data-i18n="preview.showDragGridNumberHelp">控制拖拽网格模式下图块上的序号显示</small>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-container">
+                        <img id="previewImg" src="" alt="切割预览图" style="display: none;">
+                        <div id="draggableGrid" class="draggable-grid"></div>
+                        <div id="previewPlaceholder" data-i18n="preview.placeholder">上传图片后将显示预览</div>
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div class="action-buttons preview-actions">
+                        <button id="previewBtn" class="btn primary" aria-describedby="preview-help" data-i18n="actions.generatePreview">
+                            生成预览
+                        </button>
+                        <button id="splitBtn" class="btn secondary" aria-describedby="split-help" data-i18n="actions.startSplit">
+                            开始切割
+                        </button>
+                        <button id="toggleHistoryBtn" class="btn" style="background: linear-gradient(145deg, #f39c12, #e67e22); color: white;" data-i18n="actions.historyFiles">
+                            历史文件
+                        </button>
+                        <div style="font-size: 0.8em; color: #718096; text-align: center; width: 100%; margin-top: 8px;">
+                            <div id="preview-help" data-i18n="actions.previewShortcut">快捷键：Ctrl+P</div>
+                            <div id="split-help" data-i18n="actions.splitShortcut">快捷键：Ctrl+S</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
 
         <!-- 状态栏 -->
         <footer class="status-bar" role="status" aria-live="polite">
-            <span id="statusMessage">就绪</span>
+            <span id="statusMessage" data-i18n="status.ready">就绪</span>
         </footer>
+        
+        <!-- 作者信息 -->
+        <div class="author-info">
+            <p>
+                <span>作者：<strong>Arminosi</strong></span>
+                <span class="separator">|</span>
+                <span>开源项目：<a href="https://github.com/Arminosi/SpriteSlice" target="_blank" rel="noopener noreferrer">
+                    <svg class="github-icon" viewBox="0 0 16 16" width="16" height="16">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    SpriteSlice
+                </a></span>
+            </p>
+        </div>
     </div>
 
     <!-- 历史切割文件悬浮窗格 - 放在最外层确保置顶显示 -->
     <aside id="historyPane" class="history-pane" role="dialog" aria-labelledby="history-title" aria-hidden="true">
         <header id="historyPaneHeader" class="history-pane-header">
-            <h3 id="history-title">历史切割文件</h3>
+            <h3 id="history-title" data-i18n="history.title">历史切割文件</h3>
             <div>
-                <button id="clearHistoryBtn" class="btn secondary history-clear-btn" aria-label="清空所有历史记录">
+                <button id="clearHistoryBtn" class="btn secondary history-clear-btn" aria-label="清空所有历史记录" data-i18n="history.clearAll">
                     清空全部
                 </button>
-                <button id="closeHistoryPane" class="btn history-close-btn" aria-label="关闭历史窗格">
+                <button id="closeHistoryPane" class="btn history-close-btn" aria-label="关闭历史窗格" data-i18n="history.close">
                     关闭
                 </button>
             </div>
@@ -190,8 +240,10 @@
     <script src="assets/js/config.js"></script>
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/image-processor.js"></script>
+    <script src="assets/js/tabs.js"></script>
     <script src="assets/js/draggable-grid.js"></script>
     <script src="assets/js/history-manager.js"></script>
+    <script src="assets/js/i18n.js"></script>
     <script src="assets/js/app.js"></script>
 
     <!-- 结构化数据 -->
@@ -205,12 +257,26 @@
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "Any",
         "browserRequirements": "HTML5, Canvas, FileReader API",
+        "author": {
+            "@type": "Person",
+            "name": "Arminosi"
+        },
+        "codeRepository": "https://github.com/Arminosi/SpriteSlice",
         "offers": {
             "@type": "Offer",
             "price": "0",
             "priceCurrency": "USD"
         }
     }
+    </script>
+    
+    <!-- 页面加载完成后初始化国际化 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initializeI18n === 'function') {
+                initializeI18n();
+            }
+        });
     </script>
 </body>
 </html>

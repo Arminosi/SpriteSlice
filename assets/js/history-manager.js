@@ -18,6 +18,38 @@ class HistoryManager {
         this.historyList = document.getElementById('historyList');
         this.setupEventListeners();
         this.setupDragFunctionality();
+        
+        // 监听语言切换事件
+        window.addEventListener('languageChanged', () => {
+            this.updateLanguage();
+        });
+    }
+
+    /**
+     * 更新语言显示
+     */
+    updateLanguage() {
+        // 重新渲染历史列表以更新按钮文本
+        this.render();
+        
+        // 更新已打开的预览模态框
+        const existingModal = document.querySelector('.preview-modal');
+        if (existingModal) {
+            // 更新标题
+            const title = existingModal.querySelector('h3');
+            if (title) {
+                title.textContent = i18n.t('tilePreview.title');
+            }
+            
+            // 更新配置信息
+            const infoSpan = existingModal.querySelector('.preview-info');
+            if (infoSpan && infoSpan.dataset.rows && infoSpan.dataset.cols && infoSpan.dataset.total) {
+                const rows = infoSpan.dataset.rows;
+                const cols = infoSpan.dataset.cols;
+                const total = infoSpan.dataset.total;
+                infoSpan.textContent = `${i18n.t('previewConfig.config')} ${rows}${i18n.t('previewConfig.rows')} × ${cols}${i18n.t('previewConfig.cols')} (${i18n.t('previewConfig.total')}${total}${i18n.t('previewConfig.tiles')})`;
+            }
+        }
     }
 
     /**
@@ -106,10 +138,10 @@ class HistoryManager {
             const history = this.getAll().filter(item => item.id !== id);
             localStorage.setItem(this.storageKey, JSON.stringify(history));
             this.render();
-            Utils.showNotification('历史记录已删除', 'success');
+            Utils.showNotification(i18n.t('history.deleted'), 'success');
         } catch (error) {
             console.error('删除历史记录失败:', error);
-            Utils.showNotification('删除失败', 'error');
+            Utils.showNotification(i18n.t('history.deleteFailed'), 'error');
         }
     }
 
@@ -216,7 +248,7 @@ class HistoryManager {
 
         // 下载按钮
         const downloadBtn = Utils.createElement('button', {
-            text: '下载',
+            text: i18n.t('history.download'),
             className: 'btn secondary',
             style: {
                 padding: '4px 12px',
@@ -229,7 +261,7 @@ class HistoryManager {
 
         // 预览按钮
         const previewBtn = Utils.createElement('button', {
-            text: '预览',
+            text: i18n.t('history.preview'),
             className: 'btn',
             style: {
                 padding: '4px 12px',
@@ -244,7 +276,7 @@ class HistoryManager {
 
         // 删除按钮
         const deleteBtn = Utils.createElement('button', {
-            text: '删除',
+            text: i18n.t('history.delete'),
             className: 'btn',
             style: {
                 padding: '4px 12px',
@@ -275,10 +307,10 @@ class HistoryManager {
     download(item) {
         try {
             Utils.downloadFile(item.data, item.name);
-            Utils.showNotification('下载开始', 'success');
+            Utils.showNotification(i18n.t('history.downloadStart'), 'success');
         } catch (error) {
             console.error('下载失败:', error);
-            Utils.showNotification('下载失败', 'error');
+            Utils.showNotification(i18n.t('history.downloadFailed'), 'error');
         }
     }
 
@@ -304,10 +336,11 @@ class HistoryManager {
                 files.map(f => zip.files[f].async('base64'))
             );
 
-            this._showPreviewModal(base64Array, files);
+            // 传递原始设置参数给预览模态框
+            this._showPreviewModal(base64Array, files, item.settings || {});
         } catch (error) {
             console.error('预览失败:', error);
-            Utils.showNotification('预览失败', 'error');
+            Utils.showNotification(i18n.t('history.previewFailed'), 'error');
         }
     }
 
@@ -315,7 +348,7 @@ class HistoryManager {
      * 显示预览模态框
      * @private
      */
-    _showPreviewModal(base64Array, files) {
+    _showPreviewModal(base64Array, files, settings = {}) {
         let modal = document.getElementById('previewModal');
         
         if (!modal) {
@@ -326,13 +359,40 @@ class HistoryManager {
         const grid = modal.querySelector('#previewGrid');
         grid.innerHTML = '';
 
-        // 计算网格列数
-        const total = base64Array.length;
-        const cols = Math.min(Math.ceil(Math.sqrt(total)), 10);
-        grid.style.gridTemplateColumns = `repeat(${cols}, minmax(80px, 1fr))`;
+        // 使用原始切割配置的行列数
+        const rows = settings.rows || CONFIG.DEFAULTS.ROWS;
+        const cols = settings.cols || CONFIG.DEFAULTS.COLS;
+        
+        // 计算预览网格的列数，优先使用原始列数
+        const previewCols = Math.min(cols, 12); // 最多12列避免太挤
+        grid.style.gridTemplateColumns = `repeat(${previewCols}, minmax(60px, 1fr))`;
+        
+        // 添加标题显示切割信息
+        const header = modal.querySelector('#previewHeader');
+        if (header) {
+            const infoText = `${i18n.t('previewConfig.config')} ${rows}${i18n.t('previewConfig.rows')} × ${cols}${i18n.t('previewConfig.cols')} (${i18n.t('previewConfig.total')}${base64Array.length}${i18n.t('previewConfig.tiles')})`;
+            let infoSpan = header.querySelector('.preview-info');
+            if (!infoSpan) {
+                infoSpan = Utils.createElement('span', {
+                    className: 'preview-info',
+                    style: {
+                        color: '#718096',
+                        fontSize: '0.9em',
+                        marginLeft: '10px'
+                    }
+                });
+                header.appendChild(infoSpan);
+            }
+            
+            // 添加数据属性以便语言切换时更新
+            infoSpan.dataset.rows = rows;
+            infoSpan.dataset.cols = cols;
+            infoSpan.dataset.total = base64Array.length;
+            infoSpan.textContent = infoText;
+        }
 
         base64Array.forEach((base64, index) => {
-            const item = this._createPreviewItem(base64, files[index], index);
+            const item = this._createPreviewItem(base64, files[index], index, { rows, cols });
             grid.appendChild(item);
         });
 
@@ -401,16 +461,39 @@ class HistoryManager {
             }
         });
 
+        // 添加头部信息区域
+        const header = Utils.createElement('div', {
+            id: 'previewHeader',
+            style: {
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '15px',
+                paddingBottom: '10px',
+                borderBottom: '1px solid #e2e8f0'
+            }
+        });
+
+        const title = Utils.createElement('h3', {
+            text: i18n.t('tilePreview.title'),
+            style: {
+                margin: '0',
+                color: '#2d3748',
+                fontSize: '1.2em'
+            }
+        });
+
+        header.appendChild(title);
+
         const grid = Utils.createElement('div', {
             id: 'previewGrid',
             style: {
                 display: 'grid',
-                gap: '12px',
-                marginTop: '20px'
+                gap: '12px'
             }
         });
 
         content.appendChild(closeBtn);
+        content.appendChild(header);
         content.appendChild(grid);
         modal.appendChild(content);
 
@@ -421,7 +504,7 @@ class HistoryManager {
      * 创建预览项
      * @private
      */
-    _createPreviewItem(base64, filename, index) {
+    _createPreviewItem(base64, filename, index, gridInfo = {}) {
         const container = Utils.createElement('div', {
             style: {
                 display: 'flex',
@@ -430,7 +513,17 @@ class HistoryManager {
                 padding: '8px',
                 background: '#f7fafc',
                 borderRadius: '8px',
-                border: '1px solid #e2e8f0'
+                border: '1px solid #e2e8f0',
+                transition: 'transform 0.2s ease',
+                cursor: 'pointer'
+            },
+            events: {
+                mouseenter: (e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                },
+                mouseleave: (e) => {
+                    e.target.style.transform = 'scale(1)';
+                }
             }
         });
 
@@ -442,22 +535,57 @@ class HistoryManager {
             style: {
                 maxWidth: '80px',
                 maxHeight: '80px',
-                borderRadius: '4px'
+                borderRadius: '4px',
+                marginBottom: '4px'
             }
         });
 
-        const label = Utils.createElement('div', {
-            text: filename.match(/(\d+)\.png$/)?.[1]?.replace(/^0+/, '') || (index + 1),
+        // 计算行列位置
+        const { rows = 0, cols = 0 } = gridInfo;
+        const row = cols > 0 ? Math.floor(index / cols) + 1 : 0;
+        const col = cols > 0 ? (index % cols) + 1 : 0;
+        
+        // 创建标签容器
+        const labelContainer = Utils.createElement('div', {
             style: {
-                fontSize: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '2px'
+            }
+        });
+
+        // 主序号
+        const mainLabel = Utils.createElement('div', {
+            text: `${index + 1}`,
+            style: {
+                fontSize: '14px',
                 color: '#e53e3e',
                 fontWeight: 'bold',
-                marginTop: '4px'
+                marginBottom: '2px'
             }
         });
 
+        // 位置信息
+        if (rows > 0 && cols > 0) {
+            const positionLabel = Utils.createElement('div', {
+                text: `${row},${col}`,
+                style: {
+                    fontSize: '10px',
+                    color: '#718096',
+                    backgroundColor: '#e2e8f0',
+                    padding: '1px 4px',
+                    borderRadius: '3px'
+                }
+            });
+            labelContainer.appendChild(mainLabel);
+            labelContainer.appendChild(positionLabel);
+        } else {
+            labelContainer.appendChild(mainLabel);
+        }
+
         container.appendChild(img);
-        container.appendChild(label);
+        container.appendChild(labelContainer);
 
         return container;
     }

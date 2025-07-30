@@ -22,6 +22,7 @@ class SpriteCutter {
         this.setupDragDrop();
         this.checkBrowserSupport();
         this.loadSettings();
+        this.initializePreviewState(); // 初始化预览状态
         
         Utils.showNotification('精灵图切割工具已就绪', 'success', 2000);
     }
@@ -98,11 +99,15 @@ class SpriteCutter {
         // 预览模式切换监听
         this.elements.previewModeInputs.forEach(radio => {
             radio.addEventListener('change', () => {
+                this.updateNumberControlsVisibility();
                 if (this.currentImage) {
                     this.generatePreview();
                 }
             });
         });
+
+        // 初始化序号控制显示状态
+        this.updateNumberControlsVisibility();
 
         // 监听可拖拽网格的顺序变化
         this.elements.draggableGrid.addEventListener('tileOrderChanged', (e) => {
@@ -257,7 +262,8 @@ class SpriteCutter {
             if (previewMode === 'grid') {
                 // 显示可拖拽网格
                 this.elements.previewImg.style.display = 'none';
-                this.elements.draggableGrid.style.display = 'block';
+                this.elements.draggableGrid.classList.add('active');
+                this.elements.draggableGrid.style.removeProperty('display'); // 移除内联样式让CSS类生效
                 this.elements.previewPlaceholder.style.display = 'none';
                 
                 // 可拖拽网格模式下，序号始终显示，不受addNumber影响
@@ -265,14 +271,23 @@ class SpriteCutter {
                 this.draggableGrid.init(this.elements.draggableGrid, this.currentImage, gridSettings);
             } else {
                 // 显示传统图像预览
-                this.elements.draggableGrid.style.display = 'none';
-                this.elements.previewImg.style.display = 'block';
+                this.elements.draggableGrid.classList.remove('active');
+                this.elements.draggableGrid.style.display = 'none'; // 强制隐藏
                 this.elements.previewPlaceholder.style.display = 'none';
                 
                 // 图像预览模式下，使用showPreviewNumber控制序号显示
-                const previewSettings = { ...settings, addNumber: this.elements.showPreviewNumber.checked };
+                const showPreviewNumber = this.elements.showPreviewNumber && this.elements.showPreviewNumber.checked;
+                const previewSettings = { ...settings, addNumber: showPreviewNumber };
                 const previewDataUrl = this.imageProcessor.generatePreview(this.currentImage, previewSettings);
                 this.elements.previewImg.src = previewDataUrl;
+                this.elements.previewImg.style.display = 'block';
+                
+                // 确保图像加载完成后再显示
+                this.elements.previewImg.onload = () => {
+                    console.log('图像预览已加载，显示状态:', this.elements.previewImg.style.display);
+                };
+                
+                console.log('切换到图像预览模式，showPreviewNumber:', showPreviewNumber);
             }
             
             this.updateStatus('预览已生成');
@@ -284,6 +299,37 @@ class SpriteCutter {
         } finally {
             this.isProcessing = false;
         }
+    }
+
+    /**
+     * 根据预览模式更新序号控制的显示状态
+     */
+    updateNumberControlsVisibility() {
+        const previewMode = document.querySelector('input[name="previewMode"]:checked').value;
+        const imageControl = document.getElementById('imagePreviewNumberControl');
+        const gridControl = document.getElementById('gridPreviewNumberControl');
+        
+        if (previewMode === 'grid') {
+            // 可拖拽网格模式 - 显示网格序号控制，隐藏图像序号控制
+            if (gridControl) gridControl.style.display = 'block';
+            if (imageControl) imageControl.style.display = 'none';
+        } else {
+            // 图像预览模式 - 显示图像序号控制，隐藏网格序号控制
+            if (imageControl) imageControl.style.display = 'block';
+            if (gridControl) gridControl.style.display = 'none';
+        }
+    }
+
+    /**
+     * 初始化预览状态
+     */
+    initializePreviewState() {
+        // 确保拖拽网格初始状态是隐藏的
+        this.elements.draggableGrid.classList.remove('active');
+        // 确保预览图片初始状态是隐藏的
+        this.elements.previewImg.style.display = 'none';
+        // 显示占位符
+        this.elements.previewPlaceholder.style.display = 'block';
     }
 
     /**
