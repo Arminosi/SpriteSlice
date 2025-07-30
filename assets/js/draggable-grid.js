@@ -138,10 +138,11 @@ class DraggableGrid {
         const ctx = canvas.getContext('2d');
 
         let tileIndex = 0;
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
+        for (let r = 0; r < rows; r++) {
+            const row = sortDirection === CONFIG.SORT_DIRECTIONS.REVERSE ? rows - 1 - r : r;
+            for (let c = 0; c < cols; c++) {
                 // 计算实际的列索引（考虑排序方向）
-                const actualCol = this._getColumnIndex(row, col, cols, sortDirection);
+                const actualCol = this._getColumnIndex(row, c, cols, sortDirection);
                 
                 // 提取图块
                 ctx.clearRect(0, 0, tileWidth, tileHeight);
@@ -217,11 +218,12 @@ class DraggableGrid {
         tile.className = 'grid-tile';
         tile.draggable = true;
         tile.style.backgroundImage = `url(${imageData})`;
-        tile.title = '双击预览图块'; // 添加工具提示
+        tile.title = '双击预览图块，右键删除'; // 添加工具提示
         
         // 保存数据属性，供切换序号时使用
         tile.dataset.originalIndex = originalIndex;
         tile.dataset.currentNumber = currentNumber;
+        tile.dataset.deleted = 'false'; // 标记是否已删除
         
         // 移除固定尺寸设置，让CSS控制自适应
         // 图块尺寸由CSS Grid和容器大小自动计算
@@ -243,6 +245,14 @@ class DraggableGrid {
             tile.appendChild(originalSpan);
         }
 
+        // 添加删除按钮
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'grid-tile-delete-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = '删除此图块';
+        deleteBtn.setAttribute('aria-label', '删除图块');
+        tile.appendChild(deleteBtn);
+
         return tile;
     }
 
@@ -256,6 +266,16 @@ class DraggableGrid {
         this.container.addEventListener('dragenter', (e) => this.onDragEnter(e));
         this.container.addEventListener('dragleave', (e) => this.onDragLeave(e));
         
+        // 阻止容器右键菜单，避免与图块右键删除功能冲突
+        this.container.addEventListener('contextmenu', (e) => {
+            // 如果右键点击的是图块，则允许图块处理右键事件
+            if (e.target.classList.contains('grid-tile')) {
+                return;
+            }
+            // 其他情况阻止右键菜单
+            e.preventDefault();
+        });
+        
         this.tiles.forEach(tile => {
             // 桌面端拖拽事件
             tile.addEventListener('dragstart', (e) => this.onDragStart(e));
@@ -267,6 +287,15 @@ class DraggableGrid {
 
             // 双击预览事件
             tile.addEventListener('dblclick', (e) => this.onTileDoubleClick(e));
+
+            // 右键删除事件
+            tile.addEventListener('contextmenu', (e) => this.onTileRightClick(e));
+
+            // 删除按钮点击事件
+            const deleteBtn = tile.querySelector('.grid-tile-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => this.onDeleteClick(e));
+            }
 
             // 触摸设备支持
             tile.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
@@ -689,6 +718,9 @@ class DraggableGrid {
      * 重置为默认顺序
      */
     resetOrder() {
+        // 先恢复所有已删除的图块
+        this.resetDeletions();
+        
         // 按原始索引重新排序
         const sortedTiles = [...this.tiles].sort((a, b) => {
             return parseInt(a.dataset.originalIndex) - parseInt(b.dataset.originalIndex);
@@ -920,8 +952,8 @@ class DraggableGrid {
         info.innerHTML = `
             <div style="color: #718096; font-size: 0.9em; margin-bottom: 15px;">
                 <span style="margin-right: 15px;">当前序号: ${tileInfo.currentNumber}</span>
-                <span style="margin-right: 15px;">原始序号: ${tileInfo.originalIndex}</span>
-                <span>位置: 第${tileInfo.row}行，第${tileInfo.col}列</span>
+                <span style="margin-right: 15px;">原始序号: ${parseInt(tileInfo.originalIndex) + 1}</span>
+                <span>位置: 第${parseInt(tileInfo.row) + 1}行，第${parseInt(tileInfo.col) + 1}列</span>
             </div>
         `;
 
@@ -963,6 +995,150 @@ class DraggableGrid {
 
         // 添加到页面
         document.body.appendChild(modal);
+    }
+
+    /**
+     * 右键删除事件
+     */
+    onTileRightClick(e) {
+        e.preventDefault();
+        const tile = e.target.closest('.grid-tile');
+        if (tile) {
+            // 如果图块已删除，则恢复它
+            if (tile.dataset.deleted === 'true') {
+                this.restoreTile(tile);
+            } else {
+                // 否则直接删除它
+                this.deleteTile(tile);
+            }
+        }
+    }
+
+    /**
+     * 删除按钮点击事件
+     */
+    onDeleteClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const tile = e.target.closest('.grid-tile');
+        if (tile) {
+            // 如果图块已删除，则恢复它
+            if (tile.dataset.deleted === 'true') {
+                this.restoreTile(tile);
+            } else {
+                // 否则直接删除它
+                this.deleteTile(tile);
+            }
+        }
+    }
+
+    /**
+     * 删除图块
+     */
+    deleteTile(tile) {
+        // 标记为已删除
+        tile.dataset.deleted = 'true';
+        tile.classList.add('deleted');
+        
+        // 更新删除按钮为恢复按钮
+        const deleteBtn = tile.querySelector('.grid-tile-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.innerHTML = '↻';
+            deleteBtn.title = '恢复此图块';
+        }
+        
+        // 更新图块顺序，移除已删除的图块
+        const originalIndex = parseInt(tile.dataset.originalIndex);
+        this.tileOrder = this.tileOrder.filter(index => index !== originalIndex);
+        
+        // 触发顺序变化事件
+        this.container.dispatchEvent(new CustomEvent('tileOrderChanged', {
+            detail: { order: this.getValidTileOrder() },
+            bubbles: true
+        }));
+        
+        // 显示通知
+        if (typeof Utils !== 'undefined' && Utils.showNotification) {
+            Utils.showNotification(`图块 #${tile.dataset.currentNumber} 已删除`, 'success', 2000);
+        }
+    }
+
+    /**
+     * 恢复已删除的图块
+     */
+    restoreTile(tile) {
+        // 取消删除标记
+        tile.dataset.deleted = 'false';
+        tile.classList.remove('deleted');
+        
+        // 更新按钮为删除按钮
+        const deleteBtn = tile.querySelector('.grid-tile-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.innerHTML = '×';
+            deleteBtn.title = '删除此图块';
+        }
+        
+        // 重新添加到图块顺序中
+        const originalIndex = parseInt(tile.dataset.originalIndex);
+        if (!this.tileOrder.includes(originalIndex)) {
+            this.tileOrder.push(originalIndex);
+            this.tileOrder.sort((a, b) => a - b); // 保持顺序
+        }
+        
+        // 触发顺序变化事件
+        this.container.dispatchEvent(new CustomEvent('tileOrderChanged', {
+            detail: { order: this.getValidTileOrder() },
+            bubbles: true
+        }));
+        
+        // 显示通知
+        if (typeof Utils !== 'undefined' && Utils.showNotification) {
+            Utils.showNotification(`图块 #${tile.dataset.currentNumber} 已恢复`, 'success', 2000);
+        }
+    }
+
+    /**
+     * 获取有效的图块顺序（排除已删除的）
+     */
+    getValidTileOrder() {
+        return this.tileOrder.filter(index => {
+            const tile = this.tiles.find(t => parseInt(t.dataset.originalIndex) === index);
+            return tile && tile.dataset.deleted !== 'true';
+        });
+    }
+
+    /**
+     * 重置删除状态
+     */
+    resetDeletions() {
+        this.tiles.forEach(tile => {
+            if (tile.dataset.deleted === 'true') {
+                this.restoreTile(tile);
+            }
+        });
+        
+        // 显示通知
+        if (typeof Utils !== 'undefined' && Utils.showNotification) {
+            Utils.showNotification('所有已删除的图块已恢复', 'success', 2000);
+        }
+    }
+
+    /**
+     * 根据排序方向获取列索引
+     * @private
+     */
+    _getColumnIndex(row, col, cols, sortDirection) {
+        switch (sortDirection) {
+            case CONFIG.SORT_DIRECTIONS.ODD_LEFT_EVEN_RIGHT:
+                return row % 2 === 0 ? col : cols - 1 - col;
+            case CONFIG.SORT_DIRECTIONS.EVEN_LEFT_ODD_RIGHT:
+                return row % 2 !== 0 ? col : cols - 1 - col;
+            case CONFIG.SORT_DIRECTIONS.REVERSE:
+                return cols - 1 - col;
+            case CONFIG.SORT_DIRECTIONS.NORMAL:
+            default:
+                return col;
+        }
     }
 }
 

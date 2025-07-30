@@ -7,7 +7,7 @@
     <meta name="keywords" content="精灵图,切割,图片处理,批量处理">
     <meta name="author" content="Arminosi">
     <meta name="repository" content="https://github.com/Arminosi/SpriteSlice">
-    <title>精灵图切割工具 v2.3</title>
+    <title>精灵图切割工具 v2.4</title>
     
     <!-- 预加载关键资源 -->
     <link rel="preload" href="assets/css/style.css" as="style">
@@ -110,6 +110,10 @@
                                     <label for="sortNormal" data-i18n="settings.sortNormal">正常排序（从左到右，从上到下）</label>
                                 </div>
                                 <div class="radio-option">
+                                    <input type="radio" id="sortReverse" name="sortDirection" value="reverse">
+                                    <label for="sortReverse" data-i18n="settings.sortReverse">倒序排序（从右到左，从下到上）</label>
+                                </div>
+                                <div class="radio-option">
                                     <input type="radio" id="sortOddLeftEvenRight" name="sortDirection" value="oddLeftEvenRight">
                                     <label for="sortOddLeftEvenRight" data-i18n="settings.sortOddLeftEvenRight">奇数行从左到右，偶数行从右到左排序</label>
                                 </div>
@@ -117,6 +121,7 @@
                                     <input type="radio" id="sortEvenLeftOddRight" name="sortDirection" value="evenLeftOddRight">
                                     <label for="sortEvenLeftOddRight" data-i18n="settings.sortEvenLeftOddRight">偶数行从左到右，奇数行从右到左排序</label>
                                 </div>
+
                             </div>
                         </div>
                     </div>
@@ -145,6 +150,9 @@
                         <div class="reset-button-container">
                             <button id="resetOrderBtn" class="btn reset-btn" data-i18n="preview.resetOrder">
                                 重置图块顺序
+                            </button>
+                            <button id="restoreAllBtn" class="btn restore-btn" data-i18n="preview.restoreAll" style="display: none;">
+                                恢复所有图块
                             </button>
                         </div>
                     </div>

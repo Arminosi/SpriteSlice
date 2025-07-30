@@ -75,27 +75,30 @@ class ImageProcessor {
         const tiles = [];
         let originalIndex = 0;
 
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                const colIdx = this._getColumnIndex(row, col, cols, sortDirection);
+        for (let r = 0; r < rows; r++) {
+            const row = sortDirection === CONFIG.SORT_DIRECTIONS.REVERSE ? rows - 1 - r : r;
+            for (let c = 0; c < cols; c++) {
+                const col = this._getColumnIndex(row, c, cols, sortDirection);
+                
                 const tileCanvas = this._createTileCanvas(
-                    img, colIdx, row, tileWidth, tileHeight, 0, fontSize, addNumber
+                    img, col, row, tileWidth, tileHeight, 0, fontSize, addNumber
                 );
                 
                 tiles.push({
                     canvas: tileCanvas,
                     originalIndex: originalIndex,
                     row: row,
-                    col: colIdx
+                    col: col
                 });
                 originalIndex++;
             }
         }
 
-        // 如果有自定义顺序，按自定义顺序重排
+        // 如果有自定义顺序，按自定义顺序重排，并过滤掉已删除的图块
         let orderedTiles = tiles;
-        if (customOrder && customOrder.length === tiles.length) {
-            orderedTiles = customOrder.map(index => tiles[index]);
+        if (customOrder && Array.isArray(customOrder)) {
+            // customOrder现在包含的是有效的（未删除的）图块索引
+            orderedTiles = customOrder.map(index => tiles[index]).filter(tile => tile);
         }
 
         // 生成文件
@@ -154,7 +157,10 @@ class ImageProcessor {
 
         let count = startNum + 1;
 
-        for (let row = 0; row < rows; row++) {
+        for (let r = 0; r < rows; r++) {
+            // 根据排序方向确定实际的行索引
+            const row = sortDirection === CONFIG.SORT_DIRECTIONS.REVERSE ? rows - 1 - r : r;
+            
             for (let col = 0; col < cols; col++) {
                 const colIdx = this._getColumnIndex(row, col, cols, sortDirection);
                 const x = colIdx * tileWidth + tileWidth / 2;
@@ -284,6 +290,24 @@ class ImageProcessor {
     dispose() {
         this.canvas = null;
         this.ctx = null;
+    }
+
+    /**
+     * 根据排序方向获取列索引
+     * @private
+     */
+    _getColumnIndex(row, col, cols, sortDirection) {
+        switch (sortDirection) {
+            case CONFIG.SORT_DIRECTIONS.ODD_LEFT_EVEN_RIGHT:
+                return row % 2 === 0 ? col : cols - 1 - col;
+            case CONFIG.SORT_DIRECTIONS.EVEN_LEFT_ODD_RIGHT:
+                return row % 2 !== 0 ? col : cols - 1 - col;
+            case CONFIG.SORT_DIRECTIONS.REVERSE:
+                return cols - 1 - col;
+            case CONFIG.SORT_DIRECTIONS.NORMAL:
+            default:
+                return col;
+        }
     }
 }
 

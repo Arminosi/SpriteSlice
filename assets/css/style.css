@@ -591,6 +591,8 @@ header p {
 /* 重置按钮容器 */
 .reset-button-container {
     flex-shrink: 0;
+    display: flex;
+    gap: 8px;
 }
 
 .reset-btn {
@@ -609,6 +611,24 @@ header p {
     background: linear-gradient(145deg, #dd6b20, #c05621);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+.restore-btn {
+    background: linear-gradient(145deg, #48bb78, #38a169);
+    color: white;
+    padding: 8px 16px;
+    font-size: 0.9em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.restore-btn:hover {
+    background: linear-gradient(145deg, #38a169, #2f855a);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
 }
 
 /* 预览序号控制样式 */
@@ -800,6 +820,75 @@ header p {
     border-radius: 2px;
     pointer-events: none;
     z-index: 10;
+}
+
+/* 删除按钮样式 */
+.grid-tile-delete-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 15;
+    line-height: 1;
+    padding: 0;
+}
+
+.grid-tile:hover .grid-tile-delete-btn {
+    opacity: 1;
+}
+
+.grid-tile-delete-btn:hover {
+    background: rgba(185, 28, 28, 1);
+    transform: scale(1.1);
+}
+
+/* 已删除图块样式 */
+.grid-tile.deleted {
+    opacity: 0.3;
+    filter: grayscale(100%);
+    position: relative;
+}
+
+.grid-tile.deleted::before {
+    content: '已删除';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.grid-tile.deleted .grid-tile-delete-btn {
+    background: rgba(34, 197, 94, 0.9);
+    opacity: 1;
+}
+
+.grid-tile.deleted .grid-tile-delete-btn:hover {
+    background: rgba(22, 163, 74, 1);
+}
+
+.grid-tile.deleted .grid-tile-delete-btn {
+    content: '↻';
 }
 
 /* 拖拽排序控制样式 */

@@ -38,6 +38,7 @@ class SpriteCutter {
             previewBtn: document.getElementById('previewBtn'),
             splitBtn: document.getElementById('splitBtn'),
             resetOrderBtn: document.getElementById('resetOrderBtn'),
+            restoreAllBtn: document.getElementById('restoreAllBtn'),
             previewImg: document.getElementById('previewImg'),
             draggableGrid: document.getElementById('draggableGrid'),
             previewPlaceholder: document.getElementById('previewPlaceholder'),
@@ -79,6 +80,11 @@ class SpriteCutter {
             this.resetTileOrder();
         });
 
+        // 恢复所有图块按钮
+        this.elements.restoreAllBtn.addEventListener('click', () => {
+            this.restoreAllTiles();
+        });
+
         // 设置变化监听（实时预览）
         const settingsElements = [
             this.elements.rows, this.elements.cols, this.elements.startNum,
@@ -112,6 +118,7 @@ class SpriteCutter {
         // 监听可拖拽网格的顺序变化
         this.elements.draggableGrid.addEventListener('tileOrderChanged', (e) => {
             this.customTileOrder = e.detail.order;
+            this.updateRestoreButtonVisibility();
             Utils.showNotification('图块顺序已更新', 'success', 2000);
         });
 
@@ -134,6 +141,24 @@ class SpriteCutter {
                 }
             }
         });
+
+        // 禁用预览区域的右键菜单，避免与图块右键删除功能冲突
+        this.elements.previewImg.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // 禁用预览容器的右键菜单
+        const previewContainer = document.querySelector('.preview-container');
+        if (previewContainer) {
+            previewContainer.addEventListener('contextmenu', (e) => {
+                // 如果右键点击的是图块，则允许图块处理右键事件
+                if (e.target.classList.contains('grid-tile')) {
+                    return;
+                }
+                // 其他情况阻止右键菜单
+                e.preventDefault();
+            });
+        }
     }
 
     /**
@@ -269,6 +294,7 @@ class SpriteCutter {
                 // 可拖拽网格模式下，序号始终显示，不受addNumber影响
                 const gridSettings = { ...settings, addNumber: true };
                 this.draggableGrid.init(this.elements.draggableGrid, this.currentImage, gridSettings);
+                this.updateRestoreButtonVisibility();
             } else {
                 // 显示传统图像预览
                 this.elements.draggableGrid.classList.remove('active');
@@ -456,10 +482,38 @@ class SpriteCutter {
         if (this.draggableGrid && this.elements.draggableGrid.style.display !== 'none') {
             this.draggableGrid.resetOrder();
             this.customTileOrder = null;
+            this.updateRestoreButtonVisibility();
             Utils.showNotification('图块顺序已重置', 'success', 2000);
         } else {
             Utils.showNotification('请先切换到可拖拽网格模式', 'warning', 3000);
         }
+    }
+
+    /**
+     * 恢复所有图块
+     */
+    restoreAllTiles() {
+        if (this.draggableGrid && this.elements.draggableGrid.style.display !== 'none') {
+            this.draggableGrid.resetDeletions();
+            this.updateRestoreButtonVisibility();
+        } else {
+            Utils.showNotification('请先切换到可拖拽网格模式', 'warning', 3000);
+        }
+    }
+
+    /**
+     * 更新恢复按钮的显示状态
+     */
+    updateRestoreButtonVisibility() {
+        if (!this.draggableGrid || !this.elements.restoreAllBtn) return;
+        
+        // 检查是否有已删除的图块
+        const hasDeletedTiles = this.draggableGrid.tiles && this.draggableGrid.tiles.some(tile => 
+            tile.dataset.deleted === 'true'
+        );
+        
+        // 显示或隐藏恢复按钮
+        this.elements.restoreAllBtn.style.display = hasDeletedTiles ? 'inline-block' : 'none';
     }
 
     /**

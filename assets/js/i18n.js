@@ -17,7 +17,7 @@ const i18n = {
     translations: {
         'zh-CN': {
             // 页面标题
-            title: '精灵图切割工具 v2.0',
+            title: '精灵图切割工具 v2.4',
             description: '专业的图片切割工具，支持多种排序方式和批量处理',
             
             // 头部
@@ -52,7 +52,8 @@ const i18n = {
                 sortDirection: '排序方向',
                 sortNormal: '正常排序（从左到右，从上到下）',
                 sortOddLeftEvenRight: '奇数行从左到右，偶数行从右到左排序',
-                sortEvenLeftOddRight: '偶数行从左到右，奇数行从右到左排序'
+                sortEvenLeftOddRight: '偶数行从左到右，奇数行从右到左排序',
+                sortReverse: '倒序排序（从右到左，从下到上）'
             },
             
             // 预览区域
@@ -61,12 +62,15 @@ const i18n = {
                 imagePreview: '图像预览',
                 draggableGrid: '可拖拽网格',
                 resetOrder: '重置图块顺序',
+                restoreAll: '恢复所有图块',
                 showPreviewNumber: '预览时显示序号',
                 showPreviewNumberHelp: '仅在预览模式下显示序号，不影响最终输出',
                 showDragGridNumber: '拖拽网格中显示序号',
                 showDragGridNumberHelp: '控制拖拽网格模式下图块上的序号显示',
                 placeholder: '上传图片后将显示预览',
-                tilePreviewTooltip: '双击预览图块'
+                tilePreviewTooltip: '双击预览图块，右键删除',
+                deleteTooltip: '删除此图块',
+                restoreTooltip: '恢复此图块'
             },
             
             // 操作按钮
@@ -115,7 +119,10 @@ const i18n = {
                 splitError: '图片切割失败',
                 historyCleared: '历史记录已清空',
                 fileCopied: '文件已复制到剪贴板',
-                languageChanged: '语言已切换'
+                languageChanged: '语言已切换',
+                tileDeleted: '图块已删除',
+                tileRestored: '图块已恢复',
+                allTilesRestored: '所有已删除的图块已恢复'
             },
             
             // 作者信息
@@ -147,7 +154,7 @@ const i18n = {
         
         'en-US': {
             // Page title
-            title: 'Sprite Cutting Tool v2.0',
+            title: 'Sprite Cutting Tool v2.4',
             description: 'Professional image cutting tool with multiple sorting methods and batch processing',
             
             // Header
@@ -182,7 +189,8 @@ const i18n = {
                 sortDirection: 'Sort Direction',
                 sortNormal: 'Normal sort (left to right, top to bottom)',
                 sortOddLeftEvenRight: 'Odd rows left to right, even rows right to left',
-                sortEvenLeftOddRight: 'Even rows left to right, odd rows right to left'
+                sortEvenLeftOddRight: 'Even rows left to right, odd rows right to left',
+                sortReverse: 'Reverse sort (right to left, bottom to top)'
             },
             
             // Preview area

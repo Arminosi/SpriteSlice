@@ -54,7 +54,8 @@ const CONFIG = {
     SORT_DIRECTIONS: {
         NORMAL: 'normal',
         ODD_LEFT_EVEN_RIGHT: 'oddLeftEvenRight',
-        EVEN_LEFT_ODD_RIGHT: 'evenLeftOddRight'
+        EVEN_LEFT_ODD_RIGHT: 'evenLeftOddRight',
+        REVERSE: 'reverse'
     }
 };
 
