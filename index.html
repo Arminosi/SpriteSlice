@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="专业的精灵图切割工具，支持多种排序方式和批量处理">
+    <meta name="keywords" content="精灵图,切割,图片处理,批量处理">
+    <meta name="author" content="AI Assistant">
+    <title>精灵图切割工具 v2.0</title>
+    
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="assets/css/style.css" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" as="script">
+    
+    <!-- 样式文件 -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    
+    <!-- 网站图标 -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM0Mjk5ZTEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiLz48cGF0aCBkPSJtOSA5IDMgMyAzLTMiLz48L3N2Zz4=">
+</head>
+<body>
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 头部 -->
+        <header>
+            <h1>精灵图切割工具</h1>
+            <p>专业的图片切割工具，支持多种排序方式和批量处理</p>
+        </header>
+
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 步骤1: 文件上传 -->
+            <section class="upload-section" aria-labelledby="upload-title">
+                <h2 id="upload-title">步骤 1: 选择精灵图</h2>
+                <div class="file-upload" id="dropArea" role="button" tabindex="0" aria-label="点击或拖拽上传图片">
+                    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="file-help" />
+                    <label for="fileInput">选择图片文件</label>
+                    <span id="fileNameDisplay">或将文件拖拽到此处</span>
+                    <div id="file-help" style="font-size: 0.9em; color: #718096; margin-top: 8px;">
+                        支持 PNG、JPEG、GIF、WebP 格式，快捷键：Ctrl+O
+                    </div>
+                </div>
+            </section>
+
+            <!-- 步骤2: 参数设置 -->
+            <section class="settings-section" aria-labelledby="settings-title">
+                <h2 id="settings-title">步骤 2: 设置切割参数</h2>
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <label for="rows">行数:</label>
+                        <input type="number" id="rows" min="1" max="50" value="8" aria-describedby="rows-help">
+                        <small id="rows-help" style="color: #718096;">范围: 1-50</small>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="cols">列数:</label>
+                        <input type="number" id="cols" min="1" max="50" value="12" aria-describedby="cols-help">
+                        <small id="cols-help" style="color: #718096;">范围: 1-50</small>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="startNum">起始序号:</label>
+                        <input type="number" id="startNum" min="0" value="0" aria-describedby="start-help">
+                        <small id="start-help" style="color: #718096;">从此数字开始编号</small>
+                    </div>
+
+                    <div class="setting-group">
+                        <label for="fontSize">字号:</label>
+                        <input type="number" id="fontSize" min="8" max="100" value="20" aria-describedby="font-help">
+                        <small id="font-help" style="color: #718096;">范围: 8-100px</small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 步骤3: 高级选项 -->
+            <section class="advanced-section" aria-labelledby="advanced-title">
+                <h2 id="advanced-title">步骤 3: 高级选项</h2>
+                <div class="advanced-options">
+                    <!-- 序号选项 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="addNumber" checked aria-describedby="number-help">
+                        <label for="addNumber">在图片上添加序号</label>
+                        <small id="number-help" style="color: #718096; margin-left: auto;">便于识别图块顺序</small>
+                    </div>
+                    
+                    <!-- 排序方向选项 -->
+                    <div class="radio-group" role="radiogroup" aria-labelledby="sort-title">
+                        <h3 id="sort-title">排序方向</h3>
+                        <div class="radio-option">
+                            <input type="radio" id="sortNormal" name="sortDirection" value="normal" checked>
+                            <label for="sortNormal">正常排序（从左到右，从上到下）</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="sortOddLeftEvenRight" name="sortDirection" value="oddLeftEvenRight">
+                            <label for="sortOddLeftEvenRight">奇数行从左到右，偶数行从右到左排序</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="sortEvenLeftOddRight" name="sortDirection" value="evenLeftOddRight">
+                            <label for="sortEvenLeftOddRight">偶数行从左到右，奇数行从右到左排序</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 操作按钮 -->
+            <div class="action-buttons">
+                <button id="previewBtn" class="btn primary" aria-describedby="preview-help">
+                    生成预览
+                </button>
+                <button id="splitBtn" class="btn secondary" aria-describedby="split-help">
+                    开始切割
+                </button>
+                <button id="toggleHistoryBtn" class="btn" style="background: linear-gradient(145deg, #f39c12, #e67e22); color: white;">
+                    历史文件
+                </button>
+                <div style="font-size: 0.8em; color: #718096; text-align: center; width: 100%; margin-top: 8px;">
+                    <div id="preview-help">快捷键：Ctrl+P</div>
+                    <div id="split-help">快捷键：Ctrl+S</div>
+                </div>
+            </div>
+
+            <!-- 预览区域 -->
+            <section class="preview-section" aria-labelledby="preview-title">
+                <h2 id="preview-title">预览</h2>
+                <div class="preview-container">
+                    <img id="previewImg" src="" alt="切割预览图" style="display: none;">
+                    <div id="previewPlaceholder">上传图片后将显示预览</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 状态栏 -->
+        <footer class="status-bar" role="status" aria-live="polite">
+            <span id="statusMessage">就绪</span>
+        </footer>
+    </div>
+
+    <!-- 历史切割文件悬浮窗格 - 放在最外层确保置顶显示 -->
+    <aside id="historyPane" class="history-pane" role="dialog" aria-labelledby="history-title" aria-hidden="true">
+        <header id="historyPaneHeader" class="history-pane-header">
+            <h3 id="history-title">历史切割文件</h3>
+            <div>
+                <button id="clearHistoryBtn" class="btn secondary history-clear-btn" aria-label="清空所有历史记录">
+                    清空全部
+                </button>
+                <button id="closeHistoryPane" class="btn history-close-btn" aria-label="关闭历史窗格">
+                    关闭
+                </button>
+            </div>
+        </header>
+        <div class="history-pane-content">
+            <ul id="historyList" class="history-list" role="list"></ul>
+        </div>
+    </aside>
+
+    <!-- 脚本加载 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    
+    <!-- 应用脚本 -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/image-processor.js"></script>
+    <script src="assets/js/history-manager.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <!-- 结构化数据 -->
+    <script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "WebApplication",
+        "name": "精灵图切割工具",
+        "description": "专业的精灵图切割工具，支持多种排序方式和批量处理",
+        "version": "2.0",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "HTML5, Canvas, FileReader API",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+</body>
+</html>
