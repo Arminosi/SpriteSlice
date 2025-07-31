@@ -2,7 +2,7 @@
 
 直接使用：https://arminosi.github.io/SpriteSlice/
 
-PNG序列转GIF工具：https://arminosi.github.io/PNG_to_GIF_Animation_Tool/
+PNG序列转GIF工具：https://arminosi.github.io/Image2GIF/
 
 ## 📋 项目简介
 
