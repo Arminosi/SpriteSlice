@@ -2,6 +2,8 @@
 
 直接使用：https://arminosi.github.io/SpriteSlice/
 
+PNG转GIF工具：https://arminosi.github.io/PNG_to_GIF_Animation_Tool/
+
 ## 📋 项目简介
 
 - 咳咳 本人没有任何网页基础，这玩意纯AI写加本人校对产出的，耗时一天半，主打一个能用就行
