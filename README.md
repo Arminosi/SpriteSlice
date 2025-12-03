@@ -2,7 +2,7 @@
 
 直接使用：https://arminosi.github.io/SpriteSlice/
 
-PNG序列转GIF工具：https://arminosi.github.io/Image2GIF/
+PNG序列转GIF工具：https://gif.qwq.team/
 
 ## 📋 项目简介
 
@@ -261,3 +261,4 @@ const CONFIG = {
 ---
 
 **精灵图切割工具 v2.0** - 让图片切割变得简单高效！
+
