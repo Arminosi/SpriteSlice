@@ -44,6 +44,7 @@ class SpriteCutter {
         this.elements = {
             fileInput: document.getElementById('fileInput'),
             fileNameDisplay: document.getElementById('fileNameDisplay'),
+            gifMetaPanel: document.getElementById('gifMetaPanel'),
             dropArea: document.getElementById('dropArea'),
             previewBtn: document.getElementById('previewBtn'),
             splitBtn: document.getElementById('splitBtn'),
@@ -136,6 +137,9 @@ class SpriteCutter {
             this.updateActionButtons();
             if (!this.currentImage) {
                 this.updateStatus(this.t('status.selectFile'));
+            }
+            if (this.gifSpriteSheet && this.gifSpriteSheet.gifMeta) {
+                this.showGifMetaPanel(this.gifSpriteSheet.gifMeta);
             }
         });
 
@@ -252,6 +256,7 @@ class SpriteCutter {
         try {
             this.currentFile = file;
             this.gifSpriteSheet = null;
+            this.hideGifMetaPanel();
             this.updateStatus(this.t('status.loadingImage'));
             this.elements.fileNameDisplay.textContent = `${file.name} (${Utils.formatFileSize(file.size)})`;
             
@@ -259,6 +264,7 @@ class SpriteCutter {
                 this.updateStatus(this.t('status.processingGif'));
                 const result = await this.imageProcessor.processGif(file);
                 this.gifSpriteSheet = result;
+                this.showGifMetaPanel(result.gifMeta);
 
                 const img = new Image();
                 img.src = result.canvas.toDataURL('image/png');
@@ -310,10 +316,58 @@ class SpriteCutter {
         this.currentFile = null;
         this.gifSpriteSheet = null;
         this.elements.fileNameDisplay.textContent = this.t('upload.dragDrop');
+        this.hideGifMetaPanel();
         this.elements.previewImg.style.display = 'none';
         this.elements.previewPlaceholder.style.display = 'block';
         this.updateStatus(this.t('status.selectFile'));
         this.updateActionButtons();
+    }
+
+    hideGifMetaPanel() {
+        if (!this.elements.gifMetaPanel) return;
+        this.elements.gifMetaPanel.style.display = 'none';
+        this.elements.gifMetaPanel.innerHTML = '';
+    }
+
+    showGifMetaPanel(meta) {
+        if (!this.elements.gifMetaPanel) return;
+        if (!meta || !meta.frameCount) {
+            this.hideGifMetaPanel();
+            return;
+        }
+
+        const delayText = (() => {
+            if (typeof meta.minDelayMs !== 'number' || typeof meta.maxDelayMs !== 'number') return '-';
+            const min = Math.round(meta.minDelayMs);
+            const max = Math.round(meta.maxDelayMs);
+            return min === max ? `${min} ms` : `${min}–${max} ms`;
+        })();
+
+        const fpsText = typeof meta.fps === 'number' ? meta.fps.toFixed(2) : '-';
+        const durationText = typeof meta.durationMs === 'number' ? `${(meta.durationMs / 1000).toFixed(2)} s` : '-';
+
+        const loopText = (() => {
+            if (meta.loopCount === null || meta.loopCount === undefined) return this.t('gifMeta.loopUnknown');
+            if (meta.loopCount === 0) return this.t('gifMeta.loopInfinite');
+            return this.t('gifMeta.loopCount', { count: meta.loopCount });
+        })();
+
+        this.elements.gifMetaPanel.innerHTML = `
+            <div class="gif-meta-title">${this.t('gifMeta.title')}</div>
+            <div class="gif-meta-grid">
+                <div class="gif-meta-key">${this.t('gifMeta.totalFrames')}</div>
+                <div class="gif-meta-val">${meta.frameCount}</div>
+                <div class="gif-meta-key">${this.t('gifMeta.frameDelay')}</div>
+                <div class="gif-meta-val">${delayText}</div>
+                <div class="gif-meta-key">${this.t('gifMeta.fps')}</div>
+                <div class="gif-meta-val">${fpsText}</div>
+                <div class="gif-meta-key">${this.t('gifMeta.duration')}</div>
+                <div class="gif-meta-val">${durationText}</div>
+                <div class="gif-meta-key">${this.t('gifMeta.loop')}</div>
+                <div class="gif-meta-val">${loopText}</div>
+            </div>
+        `;
+        this.elements.gifMetaPanel.style.display = 'block';
     }
 
     /**

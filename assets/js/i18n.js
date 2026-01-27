@@ -184,6 +184,18 @@ const i18n = {
                 cols: '列',
                 total: '共',
                 tiles: '个图块'
+            },
+
+            gifMeta: {
+                title: 'GIF 参数',
+                totalFrames: '总帧数',
+                frameDelay: '帧间隔',
+                fps: '平均帧率',
+                duration: '总时长',
+                loop: '循环',
+                loopUnknown: '未知',
+                loopInfinite: '是（无限）',
+                loopCount: '是（{count}）'
             }
         },
         
@@ -356,6 +368,18 @@ const i18n = {
                 cols: 'cols',
                 total: 'Total',
                 tiles: 'tiles'
+            },
+
+            gifMeta: {
+                title: 'GIF Info',
+                totalFrames: 'Frames',
+                frameDelay: 'Frame Delay',
+                fps: 'Avg FPS',
+                duration: 'Duration',
+                loop: 'Loop',
+                loopUnknown: 'Unknown',
+                loopInfinite: 'Yes (Infinite)',
+                loopCount: 'Yes ({count})'
             }
         }
     },

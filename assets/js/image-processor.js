@@ -14,10 +14,12 @@ class ImageProcessor {
     }
 
     async processGifArrayBuffer(buffer) {
+        const gifMeta = this._extractGifMetadata(buffer);
         if (typeof ImageDecoder !== 'undefined' && ImageDecoder.isTypeSupported) {
             const supported = await ImageDecoder.isTypeSupported('image/gif');
             if (supported) {
-                return await this._processGifWithImageDecoder(buffer);
+                const result = await this._processGifWithImageDecoder(buffer);
+                return { ...result, gifMeta };
             }
         }
 
@@ -69,7 +71,8 @@ class ImageProcessor {
             cols,
             frameCount,
             frameWidth,
-            frameHeight
+            frameHeight,
+            gifMeta
         };
     }
 
@@ -110,6 +113,173 @@ class ImageProcessor {
             frameCount,
             frameWidth,
             frameHeight
+        };
+    }
+
+    _extractGifMetadata(buffer) {
+        const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+        const len = bytes.length;
+        if (len < 14) {
+            return {
+                width: 0,
+                height: 0,
+                frameCount: 0,
+                delaysMs: [],
+                minDelayMs: null,
+                maxDelayMs: null,
+                avgDelayMs: null,
+                fps: null,
+                durationMs: 0,
+                loopCount: null
+            };
+        }
+
+        const signature =
+            String.fromCharCode(bytes[0], bytes[1], bytes[2]) +
+            String.fromCharCode(bytes[3], bytes[4], bytes[5]);
+        const isGif = signature === 'GIF87a' || signature === 'GIF89a';
+        if (!isGif) {
+            return {
+                width: 0,
+                height: 0,
+                frameCount: 0,
+                delaysMs: [],
+                minDelayMs: null,
+                maxDelayMs: null,
+                avgDelayMs: null,
+                fps: null,
+                durationMs: 0,
+                loopCount: null
+            };
+        }
+
+        const readU16 = (offset) => bytes[offset] | (bytes[offset + 1] << 8);
+
+        let pos = 6;
+        const width = readU16(pos);
+        const height = readU16(pos + 2);
+        const lsdPacked = bytes[pos + 4];
+        pos += 7;
+
+        if (lsdPacked & 0x80) {
+            const gctSize = 3 * (1 << ((lsdPacked & 0x07) + 1));
+            pos += gctSize;
+        }
+
+        let loopCount = null;
+        const delaysCs = [];
+        let imageCount = 0;
+
+        const skipSubBlocks = () => {
+            while (pos < len) {
+                const size = bytes[pos++];
+                if (size === 0) return;
+                pos += size;
+            }
+        };
+
+        while (pos < len) {
+            const blockId = bytes[pos++];
+
+            if (blockId === 0x3b) {
+                break;
+            }
+
+            if (blockId === 0x21) {
+                const label = bytes[pos++];
+                if (label === 0xf9) {
+                    const blockSize = bytes[pos++];
+                    if (blockSize >= 4 && pos + 4 <= len) {
+                        pos += 1;
+                        const delay = readU16(pos);
+                        pos += 2;
+                        pos += 1;
+                        pos += 1;
+                        delaysCs.push(delay);
+                    } else {
+                        pos += blockSize;
+                        if (pos < len) pos += 1;
+                    }
+                    continue;
+                }
+
+                if (label === 0xff) {
+                    const appBlockSize = bytes[pos++];
+                    const appEnd = Math.min(len, pos + appBlockSize);
+                    const appId = String.fromCharCode(...bytes.slice(pos, appEnd));
+                    pos = appEnd;
+
+                    const isNetscape = appId === 'NETSCAPE2.0' || appId === 'ANIMEXTS1.0';
+                    while (pos < len) {
+                        const size = bytes[pos++];
+                        if (size === 0) break;
+                        if (isNetscape && size >= 3 && bytes[pos] === 1 && loopCount === null) {
+                            loopCount = bytes[pos + 1] | (bytes[pos + 2] << 8);
+                        }
+                        pos += size;
+                    }
+                    continue;
+                }
+
+                skipSubBlocks();
+                continue;
+            }
+
+            if (blockId === 0x2c) {
+                if (pos + 9 > len) break;
+                const packed = bytes[pos + 8];
+                pos += 9;
+                imageCount += 1;
+
+                if (packed & 0x80) {
+                    const lctSize = 3 * (1 << ((packed & 0x07) + 1));
+                    pos += lctSize;
+                }
+
+                pos += 1;
+                skipSubBlocks();
+                continue;
+            }
+
+            break;
+        }
+
+        const frameCount = Math.max(imageCount, delaysCs.length);
+        const delaysMs = Array.from({ length: frameCount }).map((_, i) => {
+            const cs = delaysCs[i];
+            return typeof cs === 'number' ? cs * 10 : null;
+        });
+
+        const delaysForRate = delaysMs
+            .map((ms) => (typeof ms === 'number' ? ms : null))
+            .filter((ms) => typeof ms === 'number')
+            .map((ms) => Math.max(10, ms));
+
+        let minDelayMs = null;
+        let maxDelayMs = null;
+        let avgDelayMs = null;
+        let fps = null;
+        let durationMs = 0;
+
+        if (delaysForRate.length > 0) {
+            minDelayMs = Math.min(...delaysForRate);
+            maxDelayMs = Math.max(...delaysForRate);
+            durationMs = delaysForRate.reduce((sum, ms) => sum + ms, 0);
+            avgDelayMs = durationMs / delaysForRate.length;
+            fps = avgDelayMs > 0 ? 1000 / avgDelayMs : null;
+        }
+
+        return {
+            width,
+            height,
+            frameCount,
+            delaysMs,
+            minDelayMs,
+            maxDelayMs,
+            avgDelayMs,
+            fps,
+            durationMs,
+            loopCount
         };
     }
 
