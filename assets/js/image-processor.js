@@ -5,6 +5,207 @@ class ImageProcessor {
     constructor() {
         this.canvas = null;
         this.ctx = null;
+        this._gifuctLoadingPromise = null;
+    }
+
+    async processGif(file) {
+        const buffer = await this._readFileAsArrayBuffer(file);
+        return await this.processGifArrayBuffer(buffer);
+    }
+
+    async processGifArrayBuffer(buffer) {
+        if (typeof ImageDecoder !== 'undefined' && ImageDecoder.isTypeSupported) {
+            const supported = await ImageDecoder.isTypeSupported('image/gif');
+            if (supported) {
+                return await this._processGifWithImageDecoder(buffer);
+            }
+        }
+
+        await this._ensureGifuctLoaded();
+
+        const gifuctLib = window.gifuct || null;
+        const parseGIFFn =
+            (gifuctLib && typeof gifuctLib.parseGIF === 'function' && gifuctLib.parseGIF) ||
+            (typeof window.parseGIF === 'function' && window.parseGIF) ||
+            null;
+        const decompressFramesFn =
+            (gifuctLib && typeof gifuctLib.decompressFrames === 'function' && gifuctLib.decompressFrames) ||
+            (typeof window.decompressFrames === 'function' && window.decompressFrames) ||
+            null;
+
+        if (!parseGIFFn || !decompressFramesFn) {
+            throw new Error('GIF 解析库未加载，请刷新页面重试');
+        }
+
+        const gif = parseGIFFn(buffer);
+        const frames = decompressFramesFn(gif, true);
+
+        if (!frames || frames.length === 0) {
+            throw new Error('无法解析 GIF 帧');
+        }
+
+        const renderedFrames = this._renderGifFrames(frames, gif.lsd);
+        const frameCount = renderedFrames.length;
+        const cols = Math.ceil(Math.sqrt(frameCount));
+        const rows = Math.ceil(frameCount / cols);
+
+        const frameWidth = gif.lsd.width;
+        const frameHeight = gif.lsd.height;
+
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = cols * frameWidth;
+        spriteCanvas.height = rows * frameHeight;
+        const ctx = spriteCanvas.getContext('2d');
+
+        renderedFrames.forEach((frameCanvas, index) => {
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+            ctx.drawImage(frameCanvas, c * frameWidth, r * frameHeight);
+        });
+
+        return {
+            canvas: spriteCanvas,
+            rows,
+            cols,
+            frameCount,
+            frameWidth,
+            frameHeight
+        };
+    }
+
+    async _processGifWithImageDecoder(buffer) {
+        const decoder = new ImageDecoder({ data: buffer, type: 'image/gif' });
+        await decoder.tracks.ready;
+
+        const track = decoder.tracks.selectedTrack;
+        const frameCount = track.frameCount || 1;
+
+        const firstFrame = await decoder.decode({ frameIndex: 0 });
+        const frameWidth = firstFrame.image.displayWidth;
+        const frameHeight = firstFrame.image.displayHeight;
+        firstFrame.image.close();
+
+        const cols = Math.ceil(Math.sqrt(frameCount));
+        const rows = Math.ceil(frameCount / cols);
+
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = cols * frameWidth;
+        spriteCanvas.height = rows * frameHeight;
+        const ctx = spriteCanvas.getContext('2d');
+
+        for (let i = 0; i < frameCount; i++) {
+            const decoded = await decoder.decode({ frameIndex: i });
+            const r = Math.floor(i / cols);
+            const c = i % cols;
+            ctx.drawImage(decoded.image, c * frameWidth, r * frameHeight, frameWidth, frameHeight);
+            decoded.image.close();
+        }
+
+        decoder.close();
+
+        return {
+            canvas: spriteCanvas,
+            rows,
+            cols,
+            frameCount,
+            frameWidth,
+            frameHeight
+        };
+    }
+
+    _renderGifFrames(frames, lsd) {
+        const canvas = document.createElement('canvas');
+        canvas.width = lsd.width;
+        canvas.height = lsd.height;
+        const ctx = canvas.getContext('2d');
+        const frameCanvases = [];
+
+        const patchCanvas = document.createElement('canvas');
+        const patchCtx = patchCanvas.getContext('2d');
+
+        frames.forEach(frame => {
+            const dims = frame.dims;
+            const previousState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            if (frame.patch && frame.patch.length > 0) {
+                if (patchCanvas.width !== dims.width || patchCanvas.height !== dims.height) {
+                    patchCanvas.width = dims.width;
+                    patchCanvas.height = dims.height;
+                }
+
+                const imageData = new ImageData(frame.patch, dims.width, dims.height);
+                patchCtx.putImageData(imageData, 0, 0);
+
+                ctx.drawImage(patchCanvas, dims.left, dims.top);
+            }
+
+            const frameOutput = document.createElement('canvas');
+            frameOutput.width = lsd.width;
+            frameOutput.height = lsd.height;
+            frameOutput.getContext('2d').drawImage(canvas, 0, 0);
+            frameCanvases.push(frameOutput);
+
+            if (frame.disposalType === 2) {
+                ctx.clearRect(dims.left, dims.top, dims.width, dims.height);
+            } else if (frame.disposalType === 3) {
+                ctx.putImageData(previousState, 0, 0);
+            }
+        });
+
+        return frameCanvases;
+    }
+
+    _readFileAsArrayBuffer(file) {
+        if (file && typeof file.arrayBuffer === 'function') {
+            return file.arrayBuffer();
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('读取文件失败'));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async _ensureGifuctLoaded() {
+        const hasGifuct =
+            (window.gifuct && typeof window.gifuct.parseGIF === 'function' && typeof window.gifuct.decompressFrames === 'function') ||
+            (typeof window.parseGIF === 'function' && typeof window.decompressFrames === 'function');
+
+        if (hasGifuct) return;
+
+        if (this._gifuctLoadingPromise) {
+            return await this._gifuctLoadingPromise;
+        }
+
+        const urls = [
+            'https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/dist/gifuct-js.min.js',
+            'https://unpkg.com/gifuct-js@2.1.2/dist/gifuct-js.min.js'
+        ];
+
+        this._gifuctLoadingPromise = new Promise((resolve, reject) => {
+            const tryLoad = (idx) => {
+                if (idx >= urls.length) {
+                    reject(new Error('GIF 解析库加载失败'));
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = urls[idx];
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => {
+                    script.remove();
+                    tryLoad(idx + 1);
+                };
+                document.head.appendChild(script);
+            };
+
+            tryLoad(0);
+        });
+
+        await this._gifuctLoadingPromise;
     }
 
     /**
