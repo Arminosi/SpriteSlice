@@ -108,10 +108,10 @@ class HistoryManager {
             localStorage.setItem(this.storageKey, JSON.stringify(history));
             this.render();
             
-            Utils.showNotification('历史记录已保存', 'success');
+            Utils.showNotification(i18n.t('notifications.historySaved'), 'success');
         } catch (error) {
             console.error('保存历史记录失败:', error);
-            Utils.showNotification('保存历史记录失败', 'error');
+            Utils.showNotification(i18n.t('notifications.historySaveFailed'), 'error');
         }
     }
 
@@ -149,14 +149,14 @@ class HistoryManager {
      * 清空所有历史记录
      */
     clearAll() {
-        if (confirm('确定要清空所有历史记录吗？此操作不可撤销。')) {
+        if (confirm(i18n.t('history.clearConfirm'))) {
             try {
                 localStorage.removeItem(this.storageKey);
                 this.render();
-                Utils.showNotification('所有历史记录已清空', 'success');
+                Utils.showNotification(i18n.t('history.cleared'), 'success');
             } catch (error) {
                 console.error('清空历史记录失败:', error);
-                Utils.showNotification('清空失败', 'error');
+                Utils.showNotification(i18n.t('history.clearFailed'), 'error');
             }
         }
     }
@@ -171,7 +171,7 @@ class HistoryManager {
         this.historyList.innerHTML = '';
 
         if (history.length === 0) {
-            this.historyList.innerHTML = '<li style="color:#a0aec0;text-align:center;padding:20px;">暂无历史记录</li>';
+            this.historyList.innerHTML = `<li style="color:#a0aec0;text-align:center;padding:20px;">${i18n.t('history.empty')}</li>`;
             return;
         }
 
@@ -320,6 +320,11 @@ class HistoryManager {
      */
     async preview(item) {
         try {
+            if (typeof JSZip === 'undefined') {
+                Utils.showNotification(i18n.t('notifications.missingJsZip'), 'error');
+                return;
+            }
+
             const blob = await fetch(item.data).then(res => res.blob());
             const zip = await JSZip.loadAsync(blob);
             
@@ -328,7 +333,7 @@ class HistoryManager {
                 .sort();
 
             if (files.length === 0) {
-                Utils.showNotification('压缩包内无图片文件', 'warning');
+                Utils.showNotification(i18n.t('history.zipNoImages'), 'warning');
                 return;
             }
 

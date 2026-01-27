@@ -13,6 +13,14 @@ class DraggableGrid {
         this.options = {};
     }
 
+    t(key, params) {
+        const template = (window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t(key) : key;
+        if (!params) return template;
+        return template.replace(/\{(\w+)\}/g, (_, name) => {
+            return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : `{${name}}`;
+        });
+    }
+
     /**
      * 初始化可拖拽网格
      * @param {HTMLElement} container 容器元素
@@ -90,7 +98,7 @@ class DraggableGrid {
 
                     const newOriginalSpan = document.createElement('span');
                     newOriginalSpan.className = 'grid-tile-original-number';
-                    newOriginalSpan.textContent = `原:${parseInt(originalIndex) + 1}`;
+                    newOriginalSpan.textContent = `${this.t('preview.originalNumberPrefix')}${parseInt(originalIndex) + 1}`;
                     tile.appendChild(newOriginalSpan);
                     
                     // 更新数据属性
@@ -218,7 +226,7 @@ class DraggableGrid {
         tile.className = 'grid-tile';
         tile.draggable = true;
         tile.style.backgroundImage = `url(${imageData})`;
-        tile.title = '双击预览图块，右键删除'; // 添加工具提示
+        tile.title = this.t('preview.tilePreviewTooltip');
         
         // 保存数据属性，供切换序号时使用
         tile.dataset.originalIndex = originalIndex;
@@ -241,7 +249,7 @@ class DraggableGrid {
             // 添加原始序号（小字显示）
             const originalSpan = document.createElement('span');
             originalSpan.className = 'grid-tile-original-number';
-            originalSpan.textContent = `原:${originalIndex + 1}`;
+            originalSpan.textContent = `${this.t('preview.originalNumberPrefix')}${originalIndex + 1}`;
             tile.appendChild(originalSpan);
         }
 
@@ -249,8 +257,8 @@ class DraggableGrid {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'grid-tile-delete-btn';
         deleteBtn.innerHTML = '×';
-        deleteBtn.title = '删除此图块';
-        deleteBtn.setAttribute('aria-label', '删除图块');
+        deleteBtn.title = this.t('preview.deleteTooltip');
+        deleteBtn.setAttribute('aria-label', this.t('preview.deleteTooltip'));
         tile.appendChild(deleteBtn);
 
         return tile;
@@ -940,7 +948,7 @@ class DraggableGrid {
 
         // 创建标题
         const title = document.createElement('h3');
-        title.textContent = `图块 #${tileInfo.currentNumber} 预览`;
+        title.textContent = this.t('tilePreview.titleWithNumber', { num: tileInfo.currentNumber });
         title.style.cssText = `
             margin: 0 0 15px 0;
             color: #2d3748;
@@ -949,11 +957,13 @@ class DraggableGrid {
 
         // 创建图片信息
         const info = document.createElement('div');
+        const row = parseInt(tileInfo.row) + 1;
+        const col = parseInt(tileInfo.col) + 1;
         info.innerHTML = `
             <div style="color: #718096; font-size: 0.9em; margin-bottom: 15px;">
-                <span style="margin-right: 15px;">当前序号: ${tileInfo.currentNumber}</span>
-                <span style="margin-right: 15px;">原始序号: ${parseInt(tileInfo.originalIndex) + 1}</span>
-                <span>位置: 第${parseInt(tileInfo.row) + 1}行，第${parseInt(tileInfo.col) + 1}列</span>
+                <span style="margin-right: 15px;">${this.t('tilePreview.currentNumber')}: ${tileInfo.currentNumber}</span>
+                <span style="margin-right: 15px;">${this.t('tilePreview.originalNumber')}: ${parseInt(tileInfo.originalIndex) + 1}</span>
+                <span>${this.t('tilePreview.positionLabel')}: ${this.t('tilePreview.positionFormat', { row, col })}</span>
             </div>
         `;
 
@@ -1044,7 +1054,8 @@ class DraggableGrid {
         const deleteBtn = tile.querySelector('.grid-tile-delete-btn');
         if (deleteBtn) {
             deleteBtn.innerHTML = '↻';
-            deleteBtn.title = '恢复此图块';
+            deleteBtn.title = this.t('preview.restoreTooltip');
+            deleteBtn.setAttribute('aria-label', this.t('preview.restoreTooltip'));
         }
         
         // 更新图块顺序，移除已删除的图块
@@ -1059,7 +1070,7 @@ class DraggableGrid {
         
         // 显示通知
         if (typeof Utils !== 'undefined' && Utils.showNotification) {
-            Utils.showNotification(`图块 #${tile.dataset.currentNumber} 已删除`, 'success', 2000);
+            Utils.showNotification(this.t('notifications.tileDeletedNumber', { num: tile.dataset.currentNumber }), 'success', 2000);
         }
     }
 
@@ -1075,7 +1086,8 @@ class DraggableGrid {
         const deleteBtn = tile.querySelector('.grid-tile-delete-btn');
         if (deleteBtn) {
             deleteBtn.innerHTML = '×';
-            deleteBtn.title = '删除此图块';
+            deleteBtn.title = this.t('preview.deleteTooltip');
+            deleteBtn.setAttribute('aria-label', this.t('preview.deleteTooltip'));
         }
         
         // 重新添加到图块顺序中
@@ -1093,7 +1105,7 @@ class DraggableGrid {
         
         // 显示通知
         if (typeof Utils !== 'undefined' && Utils.showNotification) {
-            Utils.showNotification(`图块 #${tile.dataset.currentNumber} 已恢复`, 'success', 2000);
+            Utils.showNotification(this.t('notifications.tileRestoredNumber', { num: tile.dataset.currentNumber }), 'success', 2000);
         }
     }
 
@@ -1119,7 +1131,7 @@ class DraggableGrid {
         
         // 显示通知
         if (typeof Utils !== 'undefined' && Utils.showNotification) {
-            Utils.showNotification('所有已删除的图块已恢复', 'success', 2000);
+            Utils.showNotification(this.t('notifications.allTilesRestored'), 'success', 2000);
         }
     }
 
