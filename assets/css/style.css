@@ -378,6 +378,38 @@ header p {
     text-align: center;
 }
 
+.gif-meta-panel {
+    width: 100%;
+    align-self: stretch;
+    background: #f1f5f9;
+    border-radius: 8px;
+    border-left: 3px solid #805ad5;
+    padding: 12px;
+    color: #2d3748;
+    font-size: 0.9em;
+}
+
+.gif-meta-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4a5568;
+}
+
+.gif-meta-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+}
+
+.gif-meta-key {
+    color: #718096;
+    white-space: nowrap;
+}
+
+.gif-meta-val {
+    color: #2d3748;
+}
+
 /* 设置网格 */
 .settings-grid {
     display: grid;
