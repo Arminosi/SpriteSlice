@@ -7,10 +7,20 @@ class SpriteCutter {
         this.historyManager = new HistoryManager();
         this.draggableGrid = new DraggableGrid();
         this.currentImage = null;
+        this.currentFile = null;
+        this.gifSpriteSheet = null;
         this.isProcessing = false;
         this.customTileOrder = null; // 存储自定义的图块顺序
         
         this.init();
+    }
+
+    t(key, params) {
+        const template = (window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t(key) : key;
+        if (!params) return template;
+        return template.replace(/\{(\w+)\}/g, (_, name) => {
+            return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : `{${name}}`;
+        });
     }
 
     /**
@@ -24,7 +34,7 @@ class SpriteCutter {
         this.loadSettings();
         this.initializePreviewState(); // 初始化预览状态
         
-        Utils.showNotification('精灵图切割工具已就绪', 'success', 2000);
+        Utils.showNotification(this.t('notifications.ready'), 'success', 2000);
     }
 
     /**
@@ -119,7 +129,14 @@ class SpriteCutter {
         this.elements.draggableGrid.addEventListener('tileOrderChanged', (e) => {
             this.customTileOrder = e.detail.order;
             this.updateRestoreButtonVisibility();
-            Utils.showNotification('图块顺序已更新', 'success', 2000);
+            Utils.showNotification(this.t('notifications.orderUpdated'), 'success', 2000);
+        });
+
+        window.addEventListener('languageChanged', () => {
+            this.updateActionButtons();
+            if (!this.currentImage) {
+                this.updateStatus(this.t('status.selectFile'));
+            }
         });
 
         // 键盘快捷键
@@ -210,7 +227,7 @@ class SpriteCutter {
 
         if (unsupported.length > 0) {
             Utils.showNotification(
-                `您的浏览器不支持以下功能: ${unsupported.join(', ')}`,
+                this.t('notifications.browserUnsupported', { features: unsupported.join(', ') }),
                 'warning',
                 5000
             );
@@ -227,30 +244,60 @@ class SpriteCutter {
         }
 
         if (!Utils.isValidImageFile(file)) {
-            Utils.showNotification('请选择有效的图片文件（PNG、JPEG、GIF、WebP）', 'error');
+            Utils.showNotification(this.t('notifications.invalidFile'), 'error');
             this.resetFileDisplay();
             return;
         }
 
         try {
-            this.updateStatus('正在加载图片...');
+            this.currentFile = file;
+            this.gifSpriteSheet = null;
+            this.updateStatus(this.t('status.loadingImage'));
             this.elements.fileNameDisplay.textContent = `${file.name} (${Utils.formatFileSize(file.size)})`;
             
-            this.currentImage = await Utils.loadImage(file);
+            if (file.type === 'image/gif') {
+                this.updateStatus(this.t('status.processingGif'));
+                const result = await this.imageProcessor.processGif(file);
+                this.gifSpriteSheet = result;
+
+                const img = new Image();
+                img.src = result.canvas.toDataURL('image/png');
+                await new Promise(resolve => (img.onload = resolve));
+                this.currentImage = img;
+
+                const imageModeRadio = document.querySelector('input[name="previewMode"][value="image"]');
+                if (imageModeRadio) {
+                    imageModeRadio.checked = true;
+                }
+                this.updateNumberControlsVisibility();
+
+                Utils.showNotification(
+                    this.t('notifications.gifSpriteSheetReady', {
+                        frames: result.frameCount,
+                        cols: result.cols,
+                        rows: result.rows
+                    }),
+                    'success'
+                );
+            } else {
+                this.currentImage = await Utils.loadImage(file);
+            }
             
             // 显示图片信息
             const info = this.imageProcessor.getImageInfo(this.currentImage);
             Utils.showNotification(
-                `图片已加载: ${info.width}x${info.height}`,
+                this.t('notifications.imageLoaded', { width: info.width, height: info.height }),
                 'success'
             );
+
+            this.updateActionButtons();
 
             // 自动生成预览
             await this.generatePreview();
             
         } catch (error) {
             console.error('图片加载失败:', error);
-            Utils.showNotification('图片加载失败，请重试', 'error');
+            Utils.showNotification(this.t('notifications.imageLoadFailedRetry'), 'error');
             this.resetFileDisplay();
         }
     }
@@ -260,10 +307,13 @@ class SpriteCutter {
      */
     resetFileDisplay() {
         this.currentImage = null;
-        this.elements.fileNameDisplay.textContent = '或将文件拖拽到此处';
+        this.currentFile = null;
+        this.gifSpriteSheet = null;
+        this.elements.fileNameDisplay.textContent = this.t('upload.dragDrop');
         this.elements.previewImg.style.display = 'none';
         this.elements.previewPlaceholder.style.display = 'block';
-        this.updateStatus('请选择图片文件');
+        this.updateStatus(this.t('status.selectFile'));
+        this.updateActionButtons();
     }
 
     /**
@@ -271,7 +321,7 @@ class SpriteCutter {
      */
     async generatePreview() {
         if (!this.currentImage) {
-            Utils.showNotification('请先选择图片文件', 'warning');
+            Utils.showNotification(this.t('notifications.selectFile'), 'warning');
             return;
         }
 
@@ -279,10 +329,20 @@ class SpriteCutter {
 
         try {
             this.isProcessing = true;
-            this.updateStatus('正在生成预览...');
+            this.updateStatus(this.t('status.generating'));
             
             const settings = this.getSettings();
             const previewMode = document.querySelector('input[name="previewMode"]:checked').value;
+
+            if (this.gifSpriteSheet) {
+                this.elements.draggableGrid.classList.remove('active');
+                this.elements.draggableGrid.style.display = 'none';
+                this.elements.previewPlaceholder.style.display = 'none';
+                this.elements.previewImg.src = this.currentImage.src;
+                this.elements.previewImg.style.display = 'block';
+                this.updateStatus(this.t('status.previewGenerated'));
+                return;
+            }
             
             if (previewMode === 'grid') {
                 // 显示可拖拽网格
@@ -316,12 +376,12 @@ class SpriteCutter {
                 console.log('切换到图像预览模式，showPreviewNumber:', showPreviewNumber);
             }
             
-            this.updateStatus('预览已生成');
+            this.updateStatus(this.t('status.previewGenerated'));
             
         } catch (error) {
             console.error('预览生成失败:', error);
-            Utils.showNotification('预览生成失败', 'error');
-            this.updateStatus('预览生成失败');
+            Utils.showNotification(this.t('notifications.previewError'), 'error');
+            this.updateStatus(this.t('notifications.previewError'));
         } finally {
             this.isProcessing = false;
         }
@@ -334,6 +394,12 @@ class SpriteCutter {
         const previewMode = document.querySelector('input[name="previewMode"]:checked').value;
         const imageControl = document.getElementById('imagePreviewNumberControl');
         const gridControl = document.getElementById('gridPreviewNumberControl');
+
+        if (this.gifSpriteSheet) {
+            if (gridControl) gridControl.style.display = 'none';
+            if (imageControl) imageControl.style.display = 'none';
+            return;
+        }
         
         if (previewMode === 'grid') {
             // 可拖拽网格模式 - 显示网格序号控制，隐藏图像序号控制
@@ -363,19 +429,41 @@ class SpriteCutter {
      */
     async splitImage() {
         if (!this.currentImage) {
-            Utils.showNotification('请先选择图片文件', 'warning');
+            Utils.showNotification(this.t('notifications.selectFile'), 'warning');
+            return;
+        }
+
+        if (!this.gifSpriteSheet && typeof JSZip === 'undefined') {
+            Utils.showNotification(this.t('notifications.missingJsZip'), 'error');
+            this.updateStatus(this.t('notifications.splitError'));
             return;
         }
 
         if (this.isProcessing) {
-            Utils.showNotification('正在处理中，请稍候...', 'warning');
+            Utils.showNotification(this.t('notifications.processingWait'), 'warning');
             return;
         }
 
         try {
             this.isProcessing = true;
             this.elements.splitBtn.disabled = true;
-            this.updateStatus('正在切割图片，请稍候...');
+            this.updateStatus(this.gifSpriteSheet ? this.t('status.exportingSpriteSheet') : this.t('status.exportingTiles'));
+
+            if (this.gifSpriteSheet) {
+                const blob = await new Promise(resolve => {
+                    this.gifSpriteSheet.canvas.toBlob(resolve, 'image/png');
+                });
+
+                const originalName = (this.currentFile && this.currentFile.name) ? this.currentFile.name : 'gif';
+                const baseName = originalName.replace(/\.[^/.]+$/, '');
+                const timestamp = Utils.formatDateTime().replace(/[:\s]/g, '_');
+                const filename = `${baseName}_spritesheet_${this.gifSpriteSheet.cols}x${this.gifSpriteSheet.rows}_${timestamp}.png`;
+                Utils.downloadFile(blob, filename);
+
+                this.updateStatus(this.t('status.exportComplete'));
+                Utils.showNotification(this.t('notifications.exportedSpriteSheet'), 'success');
+                return;
+            }
 
             const settings = this.getSettings();
             
@@ -388,7 +476,7 @@ class SpriteCutter {
             
             // 生成文件名
             const timestamp = Utils.formatDateTime().replace(/[:\s]/g, '_');
-            const filename = `精灵图切割_${timestamp}.zip`;
+            const filename = `SpriteSlice_export_${timestamp}.zip`;
             
             // 下载文件
             Utils.downloadFile(zipBlob, filename);
@@ -396,13 +484,13 @@ class SpriteCutter {
             // 保存到历史
             await this.historyManager.save(filename, zipBlob, settings);
             
-            this.updateStatus('切割完成！');
-            Utils.showNotification('切割完成，文件已下载', 'success');
+            this.updateStatus(this.t('status.exportComplete'));
+            Utils.showNotification(this.t('notifications.exportedAndDownloaded'), 'success');
             
         } catch (error) {
             console.error('图片切割失败:', error);
-            Utils.showNotification('图片切割失败，请重试', 'error');
-            this.updateStatus('切割失败');
+            Utils.showNotification(this.t('notifications.exportFailedRetry'), 'error');
+            this.updateStatus(this.t('notifications.splitError'));
         } finally {
             this.isProcessing = false;
             this.elements.splitBtn.disabled = false;
@@ -483,9 +571,9 @@ class SpriteCutter {
             this.draggableGrid.resetOrder();
             this.customTileOrder = null;
             this.updateRestoreButtonVisibility();
-            Utils.showNotification('图块顺序已重置', 'success', 2000);
+            Utils.showNotification(this.t('notifications.orderReset'), 'success', 2000);
         } else {
-            Utils.showNotification('请先切换到可拖拽网格模式', 'warning', 3000);
+            Utils.showNotification(this.t('notifications.switchToGridMode'), 'warning', 3000);
         }
     }
 
@@ -497,8 +585,17 @@ class SpriteCutter {
             this.draggableGrid.resetDeletions();
             this.updateRestoreButtonVisibility();
         } else {
-            Utils.showNotification('请先切换到可拖拽网格模式', 'warning', 3000);
+            Utils.showNotification(this.t('notifications.switchToGridMode'), 'warning', 3000);
         }
+    }
+
+    updateActionButtons() {
+        if (!this.elements || !this.elements.splitBtn) return;
+        if (!this.currentImage) {
+            this.elements.splitBtn.textContent = this.t('actions.startSplit');
+            return;
+        }
+        this.elements.splitBtn.textContent = this.gifSpriteSheet ? this.t('actions.exportSpriteSheet') : this.t('actions.exportTiles');
     }
 
     /**
@@ -541,8 +638,9 @@ class SpriteCutter {
 document.addEventListener('DOMContentLoaded', () => {
     // 检查必要的依赖
     if (typeof JSZip === 'undefined') {
-        alert('JSZip库未加载，请检查网络连接或CDN可用性');
-        return;
+        if (typeof Utils !== 'undefined' && Utils.showNotification) {
+            Utils.showNotification((window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t('notifications.missingJsZip') : 'JSZip is not loaded', 'warning');
+        }
     }
 
     // 初始化应用
@@ -551,13 +649,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 全局错误处理
     window.addEventListener('error', (e) => {
         console.error('应用错误:', e.error);
-        Utils.showNotification('应用发生错误，请刷新页面重试', 'error');
+        Utils.showNotification((window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t('notifications.appErrorRefresh') : 'Application error', 'error');
     });
     
     // 未处理的Promise错误
     window.addEventListener('unhandledrejection', (e) => {
         console.error('未处理的Promise错误:', e.reason);
-        Utils.showNotification('操作失败，请重试', 'error');
+        Utils.showNotification((window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t('notifications.operationFailedRetry') : 'Operation failed', 'error');
     });
 });
 
